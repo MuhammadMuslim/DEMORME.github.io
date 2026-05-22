@@ -45,6 +45,48 @@ input,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
 .kinerja-status{font-size:11px;margin-top:4px;font-weight:bold;}
 .kinerja-info{font-size:10px;color:#999;margin-top:4px;}
 
+/* ============ DRAWER ============ */
+:root{--drawer-width:264px;}
+body{overflow-x:hidden;}
+.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:999;backdrop-filter:blur(2px);}
+.drawer-overlay.open{display:block;}
+.drawer{position:fixed;top:0;left:0;height:100vh;width:var(--drawer-width);background:white;z-index:1000;display:flex;flex-direction:column;box-shadow:4px 0 30px rgba(0,0,0,.15);transform:translateX(calc(-1 * var(--drawer-width)));transition:transform .35s cubic-bezier(.4,0,.2,1);border-right:1px solid #e5e7eb;}
+.drawer.open{transform:translateX(0);}
+.drawer-header{display:flex;align-items:center;justify-content:space-between;padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.1);background:linear-gradient(135deg,#0f766e 0%,#134e4a 100%);}
+.drawer-logo{display:flex;align-items:center;gap:10px;}
+.drawer-logo-icon{font-size:26px;}
+.drawer-logo-title{font-size:17px;font-weight:800;color:white;line-height:1.1;}
+.drawer-logo-sub{font-size:11px;color:rgba(255,255,255,.7);letter-spacing:.5px;}
+.drawer-close{background:rgba(255,255,255,.15);border:none;width:30px;height:30px;border-radius:50%;color:white;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.drawer-close:hover{background:rgba(255,255,255,.3);}
+.drawer-section-label{font-size:10px;font-weight:700;color:#9ca3af;letter-spacing:.8px;text-transform:uppercase;padding:16px 18px 6px;}
+.drawer-nav{padding:0 10px;}
+.drawer-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:none;border-radius:10px;background:transparent;font-size:13.5px;color:#374151;cursor:pointer;text-align:left;transition:all .2s;margin-bottom:2px;}
+.drawer-item:hover{background:#f0fdf4;color:#0f766e;}
+.drawer-item.active{background:#ccfbf1;color:#0f766e;font-weight:600;}
+.drawer-item-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0;}
+.drawer-item-satusehat{color:#185FA5 !important;}
+.drawer-item-satusehat:hover{background:#EBF4FF !important;color:#185FA5 !important;}
+.drawer-item-satusehat.active{background:#dbeafe !important;color:#185FA5 !important;}
+.drawer-footer{margin-top:auto;padding:16px 18px;border-top:1px solid #f0f0f0;background:#fafafa;}
+.drawer-footer-text{font-size:12px;font-weight:600;color:#374151;}
+.drawer-footer-sub{font-size:10px;color:#9ca3af;margin-top:2px;}
+
+/* ============ TOPBAR REWORK ============ */
+.topbar{background:linear-gradient(135deg,#0f766e 0%,#134e4a 100%);color:white;padding:0 20px;height:60px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:500;box-shadow:0 2px 12px rgba(0,0,0,.15);}
+.topbar h1{display:none;}
+.topbar input[type=file]{display:none;}
+.topbar-menu-btn{background:rgba(255,255,255,.15);border:none;border-radius:8px;width:36px;height:36px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;padding:8px;transition:background .2s;}
+.topbar-menu-btn:hover{background:rgba(255,255,255,.25);}
+.topbar-menu-btn span{display:block;height:2px;width:18px;background:white;border-radius:2px;}
+.topbar-brand{display:flex;align-items:center;gap:8px;}
+.topbar-brand-icon{font-size:20px;}
+.topbar-brand-name{font-size:17px;font-weight:700;letter-spacing:.2px;}
+.topbar-active-tab{font-size:12px;background:rgba(255,255,255,.15);padding:4px 10px;border-radius:20px;color:rgba(255,255,255,.9);display:none;}
+@media(min-width:640px){.topbar-active-tab{display:inline-block;}}
+.upload-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:white;padding:7px 14px;border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s;}
+.upload-btn:hover{background:rgba(255,255,255,.28);}
+
 /* KINERJA CARD CLICKABLE */
 .kinerja-card{
   background:white;padding:20px;border-radius:12px;
@@ -133,20 +175,88 @@ input,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
 
 <body>
 
+<!-- DRAWER OVERLAY -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
+<!-- NAVIGATION DRAWER -->
+<aside class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-logo">
+      <span class="drawer-logo-icon">📊</span>
+      <div>
+        <div class="drawer-logo-title">SIKes</div>
+        <div class="drawer-logo-sub">Analytics</div>
+      </div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+
+  <div class="drawer-section-label">Menu Utama</div>
+  <nav class="drawer-nav">
+    <button class="drawer-item active" data-tab="dashboard" onclick="showTabDrawer('dashboard',this)">
+      <span class="drawer-item-icon">🏠</span>
+      <span>Dashboard</span>
+    </button>
+    <button class="drawer-item" data-tab="pasien" onclick="showTabDrawer('pasien',this)">
+      <span class="drawer-item-icon">👥</span>
+      <span>Data Pasien</span>
+    </button>
+    <button class="drawer-item" data-tab="penyakit" onclick="showTabDrawer('penyakit',this)">
+      <span class="drawer-item-icon">🦠</span>
+      <span>Analisis Penyakit</span>
+    </button>
+    <button class="drawer-item" data-tab="prediksi" onclick="showTabDrawer('prediksi',this)">
+      <span class="drawer-item-icon">🔮</span>
+      <span>Prediksi Pasien</span>
+    </button>
+    <button class="drawer-item" data-tab="rs" onclick="showTabDrawer('rs',this)">
+      <span class="drawer-item-icon">🏥</span>
+      <span>Prediksi Rumah Sakit</span>
+    </button>
+  </nav>
+
+  <div class="drawer-section-label" style="margin-top:8px;">Integrasi</div>
+  <nav class="drawer-nav">
+    <button class="drawer-item drawer-item-satusehat" data-tab="satusehat" onclick="showTabDrawer('satusehat',this)">
+      <span class="drawer-item-icon">🛡️</span>
+      <span>Analisis SATUSEHAT</span>
+    </button>
+  </nav>
+
+  <div class="drawer-footer">
+    <div class="drawer-footer-text">SIKes Analytics v1.0</div>
+    <div class="drawer-footer-sub">Sistem Informasi Kesehatan</div>
+  </div>
+</aside>
+
 <!-- TOPBAR -->
 <div class="topbar">
-  <h1>📊 SIKes Analytics</h1>
-  <input type="file" id="excelFile" accept=".xlsx,.xls">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button class="topbar-menu-btn" onclick="openDrawer()" aria-label="Buka menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="topbar-brand">
+      <span class="topbar-brand-icon">📊</span>
+      <span class="topbar-brand-name">SIKes Analytics</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span class="topbar-active-tab" id="topbarTabLabel">Dashboard</span>
+    <label class="upload-btn" for="excelFile">
+      <span>📂 Upload Excel</span>
+      <input type="file" id="excelFile" accept=".xlsx,.xls" style="display:none;">
+    </label>
+  </div>
 </div>
 
-<!-- NAVIGASI -->
-<div class="nav">
-  <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
-  <button onclick="showTab('pasien',this)">Data Pasien</button>
-  <button onclick="showTab('penyakit',this)">Analisis Penyakit</button>
-  <button onclick="showTab('prediksi',this)">Prediksi Pasien</button>
-  <button onclick="showTab('rs',this)">Prediksi Rumah Sakit</button>
-  <button onclick="showTab('satusehat',this)" style="background:#185FA5;color:white;">🛡️ Analisis SATUSEHAT</button>
+<!-- NAVIGASI (hidden on desktop, visible on mobile as horizontal scroll) -->
+<div class="nav" id="mainNav">
+  <button class="active" data-tab="dashboard" onclick="showTab('dashboard',this)">🏠 Dashboard</button>
+  <button data-tab="pasien" onclick="showTab('pasien',this)">👥 Data Pasien</button>
+  <button data-tab="penyakit" onclick="showTab('penyakit',this)">🦠 Analisis Penyakit</button>
+  <button data-tab="prediksi" onclick="showTab('prediksi',this)">🔮 Prediksi Pasien</button>
+  <button data-tab="rs" onclick="showTab('rs',this)">🏥 Prediksi RS</button>
+  <button data-tab="satusehat" onclick="showTab('satusehat',this)" style="background:#185FA5;color:white;">🛡️ SATUSEHAT</button>
 </div>
 
 <!-- MODAL DETAIL -->
@@ -2279,3 +2389,55 @@ nav.scrollLeft=scrollLeft-walk;
 </body>
 
 </html>
+
+<script>
+// ========================
+// DRAWER FUNCTIONS
+// ========================
+function openDrawer(){
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+const tabLabels = {
+  dashboard: '🏠 Dashboard',
+  pasien: '👥 Data Pasien',
+  penyakit: '🦠 Analisis Penyakit',
+  prediksi: '🔮 Prediksi Pasien',
+  rs: '🏥 Prediksi Rumah Sakit',
+  satusehat: '🛡️ SATUSEHAT'
+};
+
+function showTabDrawer(tab, btn){
+  document.querySelectorAll("[id^='tab-']").forEach(x => x.classList.add("section-hidden"));
+  document.getElementById("tab-"+tab).classList.remove("section-hidden");
+  document.querySelectorAll('.drawer-item').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  const label = document.getElementById('topbarTabLabel');
+  if(label) label.textContent = tabLabels[tab] || tab;
+  if(tab==='penyakit'){setTimeout(()=>{if(typeof map!=='undefined'&&map)map.invalidateSize();},200);}
+  closeDrawer();
+}
+
+// Patch showTab to also sync drawer + topbar label
+document.addEventListener('DOMContentLoaded', () => {
+  const _orig = window.showTab;
+  window.showTab = function(tab, btn){
+    _orig(tab, btn);
+    document.querySelectorAll('.drawer-item').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === tab);
+    });
+    const label = document.getElementById('topbarTabLabel');
+    if(label) label.textContent = tabLabels[tab] || tab;
+  };
+});
+</script>
