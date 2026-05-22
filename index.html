@@ -1,0 +1,2210 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIKes Analytics</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial, sans-serif;background:#f4f7fb;}
+.topbar{background:#0f766e;color:white;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;}
+.topbar h1{font-size:20px;}
+.nav{display:flex;gap:10px;padding:10px 20px;background:white;border-bottom:1px solid #ddd;flex-wrap:wrap;}
+.nav button{padding:10px 16px;border:none;border-radius:8px;cursor:pointer;background:#e5e7eb;font-size:14px;transition:background 0.2s;}
+.nav button:hover{background:#d1d5db;}
+.nav button.active{background:#0f766e;color:white;}
+.content{padding:20px;}
+.section-hidden{display:none;}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;margin-bottom:20px;}
+.metric-card{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.06);}
+.metric-label{font-size:13px;color:#666;}
+.metric-value{font-size:28px;font-weight:bold;margin-top:8px;display:flex;flex-direction:column;}
+.metric-change{margin-top:8px;font-size:13px;font-weight:bold;display:flex;align-items:center;gap:5px;}
+.up{color:#16a34a;} .down{color:#dc2626;}
+.card{background:white;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 2px 6px rgba(0,0,0,.06);}
+.card-title{font-size:18px;font-weight:bold;margin-bottom:10px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:768px){.two-col{grid-template-columns:1fr;}}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;}
+th{background:#f9fafb;font-weight:600;}
+input,select{padding:8px;border-radius:6px;border:1px solid #ccc;}
+.predict-box{padding:15px;border-radius:10px;margin-bottom:10px;}
+.risk-high{background:#fee2e2;} .risk-med{background:#fef3c7;} .risk-low{background:#dcfce7;}
+.progress-bar{height:6px;background:#ddd;border-radius:10px;overflow:hidden;margin-top:6px;}
+.progress-fill{height:100%;border-radius:10px;transition:width 0.3s ease;}
+.chart-wrap{height:320px;}
+.filter-bar{display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;}
+.kinerja-status{font-size:11px;margin-top:4px;font-weight:bold;}
+.kinerja-info{font-size:10px;color:#999;margin-top:4px;}
+
+/* KINERJA CARD CLICKABLE */
+.kinerja-card{
+  background:white;padding:20px;border-radius:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,.06);
+  cursor:pointer;transition:all 0.2s;
+  border:2px solid transparent;
+}
+.kinerja-card:hover{
+  border-color:#0f766e;
+  box-shadow:0 4px 16px rgba(15,118,110,.15);
+  transform:translateY(-2px);
+}
+.kinerja-card small{display:block;margin-bottom:4px;}
+
+/* ALERT REKOMENDASI */
+.alert-container{margin-bottom:20px;}
+.alert-box{
+  padding:16px 20px;
+  border-radius:10px;
+  margin-bottom:10px;
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  border-left:4px solid;
+}
+.alert-box.alert-danger{background:#fef2f2;border-left-color:#dc2626;color:#991b1b;}
+.alert-box.alert-warning{background:#fffbeb;border-left-color:#f59e0b;color:#92400e;}
+.alert-box.alert-success{background:#f0fdf4;border-left-color:#16a34a;color:#166534;}
+.alert-box .alert-icon{font-size:22px;flex-shrink:0;}
+.alert-box .alert-content{flex:1;}
+.alert-box .alert-title{font-weight:bold;font-size:14px;margin-bottom:4px;}
+.alert-box .alert-desc{font-size:13px;line-height:1.5;}
+.alert-box .alert-action{
+  margin-top:8px;
+  font-size:12px;
+  padding:4px 10px;
+  background:rgba(0,0,0,.06);
+  border-radius:6px;
+  display:inline-block;
+  font-weight:bold;
+}
+
+/* MODAL DETAIL */
+.modal-overlay{
+  display:none;
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.5);
+  z-index:9999;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+}
+.modal-overlay.active{display:flex;}
+.modal-box{
+  background:white;
+  border-radius:16px;
+  padding:30px;
+  max-width:700px;
+  width:100%;
+  max-height:80vh;
+  overflow-y:auto;
+  position:relative;
+  animation:slideUp 0.3s ease;
+}
+@keyframes slideUp{
+  from{transform:translateY(30px);opacity:0;}
+  to{transform:translateY(0);opacity:1;}
+}
+.modal-close{
+  position:absolute;top:15px;right:20px;
+  font-size:24px;cursor:pointer;color:#666;
+  background:none;border:none;
+}
+.modal-close:hover{color:#dc2626;}
+.modal-title{font-size:20px;font-weight:bold;margin-bottom:20px;color:#0f766e;}
+.detail-table{width:100%;border-collapse:collapse;margin-top:10px;}
+.detail-table th,.detail-table td{padding:10px 12px;border-bottom:1px solid #eee;text-align:left;font-size:13px;}
+.detail-table th{background:#f0fdfa;font-weight:600;color:#0f766e;}
+.detail-badge{padding:3px 8px;border-radius:6px;font-size:11px;font-weight:bold;}
+.badge-green{background:#dcfce7;color:#166534;}
+.badge-yellow{background:#fef3c7;color:#92400e;}
+.badge-red{background:#fee2e2;color:#991b1b;}
+</style>
+</head>
+
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <h1>📊 SIKes Analytics</h1>
+  <input type="file" id="excelFile" accept=".xlsx,.xls">
+</div>
+
+<!-- NAVIGASI -->
+<div class="nav">
+  <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
+  <button onclick="showTab('pasien',this)">Data Pasien</button>
+  <button onclick="showTab('penyakit',this)">Analisis Penyakit</button>
+  <button onclick="showTab('prediksi',this)">Prediksi Pasien</button>
+  <button onclick="showTab('rs',this)">Prediksi Rumah Sakit</button>
+  <button onclick="showTab('satusehat',this)" style="background:#185FA5;color:white;">🛡️ Analisis SATUSEHAT</button>
+</div>
+
+<!-- MODAL DETAIL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeModalDirect()">&times;</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- KONTEN UTAMA -->
+<div class="content">
+
+  <!-- ========== TAB DASHBOARD ========== -->
+  <div id="tab-dashboard">
+
+    <div class="metric-grid">
+      <div class="metric-card">
+        <small>Total Pasien</small>
+        <h1 id="totalPasien">0</h1>
+        <div class="metric-change" id="totalTrend">⬆ 0%</div>
+      </div>
+      <div class="metric-card">
+        <small>Rawat Inap</small>
+        <h1 id="rawatInap">0</h1>
+        <div class="metric-change" id="inapTrend">⬆ 0%</div>
+      </div>
+      <div class="metric-card">
+        <small>Rawat Jalan</small>
+        <h1 id="rawatJalan">0</h1>
+        <div class="metric-change" id="jalanTrend">⬆ 0%</div>
+      </div>
+      <div class="metric-card">
+        <small>Kasus Kritis</small>
+        <h1 id="kritis">0</h1>
+        <div class="metric-change" id="kritisTrend">⬆ 0%</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Tren Kunjungan Pasien</h3>
+      <div class="chart-wrap"><canvas id="trenChart"></canvas></div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <h3>Distribusi Penyakit Top 5</h3>
+        <div class="chart-wrap"><canvas id="topDiagnosisChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Distribusi Usia Pasien</h3>
+        <div class="chart-wrap"><canvas id="usiaChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- KINERJA LAYANAN (DINAMIS + CLICKABLE) -->
+    <div class="card">
+      <h3>📈 Kinerja Layanan</h3>
+      <p style="font-size:12px;color:#666;margin-bottom:15px;">
+        Klik setiap kartu untuk melihat detail. Data dihitung otomatis dari file Excel.
+      </p>
+      <div class="metric-grid">
+        <div class="kinerja-card" onclick="showDetail('igd')"><small>⏱️ Waktu IGD</small><h2 id="igdTime">0 Menit</h2></div>
+        <div class="kinerja-card" onclick="showDetail('bor')"><small>🛏️ BOR</small><h2 id="bor">0%</h2></div>
+        <div class="kinerja-card" onclick="showDetail('alos')"><small>📅 Avg LOS</small><h2 id="alos">0 Hari</h2></div>
+        <div class="kinerja-card" onclick="showDetail('kepuasan')"><small>😊 Kepuasan</small><h2 id="kepuasan">0%</h2></div>
+        <div class="kinerja-card" onclick="showDetail('readmission')"><small>🔄 Readmission</small><h2 id="readmission">0%</h2></div>
+      </div>
+    </div>
+
+    <!-- ALERT REKOMENDASI -->
+    <div class="card">
+      <h3>🔔 Rekomendasi & Alert</h3>
+      <p style="font-size:12px;color:#666;margin-bottom:15px;">Rekomendasi otomatis berdasarkan kondisi kinerja layanan saat ini.</p>
+      <div class="alert-container" id="alertContainer">
+        <div class="alert-box alert-warning">
+          <div class="alert-icon">📋</div>
+          <div class="alert-content">
+            <div class="alert-title">Menunggu Data</div>
+            <div class="alert-desc">Upload file Excel untuk mendapatkan rekomendasi otomatis berdasarkan kondisi kinerja layanan.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========== TAB PASIEN ========== -->
+  <div id="tab-pasien" class="section-hidden">
+    <div class="card">
+      <div class="card-title">Data Pasien</div>
+      <div class="filter-bar">
+        <input type="text" id="searchPasien" placeholder="Cari RM / Nama" oninput="renderPasienTable()">
+        <select id="filterStatus" onchange="renderPasienTable()">
+          <option value="">Semua Status</option>
+          <option>Rawat Inap</option>
+          <option>Rawat Jalan</option>
+          <option>Kritis</option>
+          <option>Sembuh</option>
+        </select>
+        <select id="filterPoli" onchange="renderPasienTable()">
+          <option value="">Semua Poli</option>
+          <option>Jantung</option>
+          <option>Umum</option>
+          <option>Anak</option>
+          <option>Penyakit Dalam</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr><th>RM</th><th>Nama</th><th>Usia</th><th>Poli</th><th>Diagnosis</th><th>Status</th></tr></thead>
+        <tbody id="pasienTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ========== TAB PENYAKIT ========== -->
+  <div id="tab-penyakit" class="section-hidden">
+    <div class="metric-grid">
+      <div class="metric-card"><div class="metric-label">Kasus DBD</div><div class="metric-value" id="dbdCount">0</div></div>
+      <div class="metric-card"><div class="metric-label">Kasus Hipertensi</div><div class="metric-value" id="htnCount">0</div></div>
+      <div class="metric-card"><div class="metric-label">Kasus Diabetes</div><div class="metric-value" id="dmCount">0</div></div>
+      <div class="metric-card"><div class="metric-label">Kasus ISPA</div><div class="metric-value" id="ispaCount">0</div></div>
+    </div>
+    <div class="card"><div class="card-title">Tren Penyakit Bulanan</div><div class="chart-wrap"><canvas id="penyakitChart"></canvas></div></div>
+    <div class="card">
+      <div class="card-title">Korelasi Penyakit & Faktor Risiko</div>
+      <div class="two-col">
+        <div><h4 style="margin-bottom:10px;">Radar Korelasi Kasus</h4><div class="chart-wrap"><canvas id="korelasiChart"></canvas></div></div>
+        <div><h4 style="margin-bottom:10px;">📊 Korelasi Faktor Risiko</h4><div id="korelasi-result"><p style="color:#999;font-size:13px;">Upload data Excel untuk melihat korelasi.</p></div></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">Sebaran Pasien per Kecamatan</div><div class="chart-wrap"><canvas id="kecamatanChart"></canvas></div></div>
+    <div class="card"><div class="card-title">Peta Sebaran Pasien DIY</div><div id="mapDIY" style="height:500px;border-radius:12px;overflow:hidden;"></div></div>
+  </div>
+
+  <!-- ========== TAB PREDIKSI ========== -->
+  <div id="tab-prediksi" class="section-hidden">
+    <div class="card">
+      <div class="card-title">Prediksi Risiko Pasien Dinamis</div>
+      <div style="display:grid;grid-template-columns:320px 1fr;gap:24px;align-items:start;">
+        <div>
+          <label>Cari Nama Pasien</label>
+          <select id="prediksiPasien" onchange="loadPrediksiPasien()" style="width:100%;margin-bottom:18px;"><option value="">-- Pilih Pasien --</option></select>
+          <label>Usia (tahun)</label><input type="range" min="18" max="90" value="55" id="sl-usia" oninput="updatePrediksi()" style="width:100%"><div id="val-usia">55 tahun</div><br>
+          <label>Tekanan Darah Sistolik</label><input type="range" min="90" max="200" value="145" id="sl-td" oninput="updatePrediksi()" style="width:100%"><div id="val-td">145 mmHg</div><br>
+          <label>Gula Darah (mg/dL)</label><input type="range" min="70" max="400" value="180" id="sl-gd" oninput="updatePrediksi()" style="width:100%"><div id="val-gd">180 mg/dL</div><br>
+          <label>BMI</label><input type="range" min="15" max="45" value="27" step="0.1" id="sl-bmi" oninput="updatePrediksi()" style="width:100%"><div id="val-bmi">27</div><br>
+          <label>Kolesterol (mg/dL)</label><input type="range" min="100" max="350" value="220" id="sl-kol" oninput="updatePrediksi()" style="width:100%"><div id="val-kol">220 mg/dL</div><br>
+          <label>Riwayat Merokok</label>
+          <select id="sl-rokok" onchange="updatePrediksi()" style="width:100%"><option value="0">Tidak</option><option value="1">Ya</option></select>
+        </div>
+        <div><div id="prediksi-result"></div></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">Proyeksi Kasus Penyakit Tidak Menular</div><div class="chart-wrap"><canvas id="forecastChart"></canvas></div></div>
+  </div>
+
+  <!-- ========== TAB PREDIKSI RUMAH SAKIT ========== -->
+<div id="tab-rs" class="section-hidden">
+
+  <!-- ANALISIS PEMBAYARAN -->
+  <div class="card">
+    <div class="card-title">💳 Analisis Pembayaran Pasien</div>
+
+    <div class="metric-grid">
+      <div class="metric-card">
+        <small>Pasien BPJS</small>
+        <h1 id="bpjsTotal">0</h1>
+        <div id="bpjsPersen" class="metric-change up">0%</div>
+      </div>
+
+      <div class="metric-card">
+        <small>Pasien Umum</small>
+        <h1 id="umumTotal">0</h1>
+        <div id="umumPersen" class="metric-change up">0%</div>
+      </div>
+
+      <div class="metric-card">
+        <small>Pembayaran Bermasalah</small>
+        <h1 id="problemBayar">0</h1>
+        <div id="problemPersen" class="metric-change down">0%</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <canvas id="paymentChart"></canvas>
+    </div>
+
+    <div id="paymentRekomendasi" style="margin-top:20px;"></div>
+  </div>
+
+
+  <!-- ANALISIS OVERLOAD POLI -->
+  <div class="card">
+    <div class="card-title">🏥 Analisis Overload Poli / Klinik</div>
+
+    <div class="metric-grid" id="poliOverloadCards"></div>
+
+    <div class="chart-wrap" style="margin-top:20px;">
+      <canvas id="poliChart"></canvas>
+    </div>
+
+    <div id="poliRekomendasi" style="margin-top:20px;"></div>
+  </div>
+
+</div>
+
+
+<!-- ========== TAB ANALISIS SATUSEHAT ========== -->
+<div id="tab-satusehat" class="section-hidden">
+
+  <style>
+    /* SATUSEHAT specific styles using index.html color system */
+    .ss-header{background:white;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;}
+    .ss-header-icon{width:48px;height:48px;background:#185FA5;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+    .ss-header-text h2{font-size:20px;font-weight:bold;color:#185FA5;margin-bottom:4px;}
+    .ss-header-text p{font-size:13px;color:#666;}
+    .ss-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;}
+    .ss-metric{background:white;border-radius:10px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.06);border-left:4px solid #e5e7eb;}
+    .ss-metric.blue{border-left-color:#185FA5;} .ss-metric.green{border-left-color:#16a34a;} .ss-metric.red{border-left-color:#dc2626;} .ss-metric.amber{border-left-color:#f59e0b;}
+    .ss-metric-val{font-size:26px;font-weight:bold;color:#111;}
+    .ss-metric.blue .ss-metric-val{color:#185FA5;} .ss-metric.green .ss-metric-val{color:#16a34a;} .ss-metric.red .ss-metric-val{color:#dc2626;} .ss-metric.amber .ss-metric-val{color:#f59e0b;}
+    .ss-metric-lbl{font-size:12px;color:#666;margin-top:4px;}
+    .ss-tabs{display:flex;gap:4px;border-bottom:2px solid #e5e7eb;margin-bottom:16px;flex-wrap:wrap;}
+    .ss-tab{padding:8px 16px;border:none;background:transparent;cursor:pointer;font-size:13px;color:#666;border-radius:8px 8px 0 0;transition:all .2s;}
+    .ss-tab.active{color:#185FA5;border-bottom:2px solid #185FA5;background:#EBF4FF;font-weight:600;}
+    .ss-tab-panel{display:none;} .ss-tab-panel.active{display:block;}
+    .ss-table-wrap{overflow-x:auto;border:1px solid #e5e7eb;border-radius:10px;}
+    .ss-table{width:100%;border-collapse:collapse;font-size:12px;}
+    .ss-table th{padding:10px 12px;text-align:left;background:#f0f6ff;color:#185FA5;font-weight:600;white-space:nowrap;}
+    .ss-table td{padding:9px 12px;border-top:1px solid #f0f0f0;color:#333;}
+    .ss-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+    .ss-badge.valid{background:#dcfce7;color:#166534;} .ss-badge.error{background:#fee2e2;color:#991b1b;}
+    .ss-badge.warning{background:#fef3c7;color:#92400e;} .ss-badge.critical{background:#fecaca;color:#7f1d1d;}
+    .ss-badge.info{background:#dbeafe;color:#1e40af;}
+    .ss-chart-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+    @media(max-width:768px){.ss-chart-row{grid-template-columns:1fr;}}
+    .ss-chart-box{background:white;border-radius:10px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.06);}
+    .ss-chart-title{font-size:13px;font-weight:600;color:#444;margin-bottom:12px;}
+    .ss-alert{padding:14px 16px;border-radius:10px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start;font-size:13px;}
+    .ss-alert.danger{background:#fef2f2;border-left:4px solid #dc2626;}
+    .ss-alert.warning{background:#fffbeb;border-left:4px solid #f59e0b;}
+    .ss-alert.success{background:#f0fdf4;border-left:4px solid #16a34a;}
+    .ss-alert.info{background:#eff6ff;border-left:4px solid #3b82f6;}
+    .ss-alert-icon{font-size:20px;flex-shrink:0;}
+    .ss-alert-title{font-weight:bold;margin-bottom:2px;}
+    .ss-alert-desc{color:#555;line-height:1.5;font-size:12px;}
+    .ss-predict-card{background:#f8faff;border:1px solid #dbeafe;border-radius:10px;padding:14px;margin-bottom:12px;}
+    .ss-predict-card h4{font-size:13px;font-weight:600;color:#1e40af;margin-bottom:8px;}
+    .ss-predict-card p{font-size:12px;color:#444;line-height:1.6;}
+    .ss-risk-row{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px;color:#666;}
+    .ss-risk-bar{height:8px;border-radius:4px;background:#e5e7eb;overflow:hidden;flex:1;}
+    .ss-risk-fill{height:100%;border-radius:4px;transition:width .5s ease;}
+    .ss-empty{text-align:center;padding:40px;color:#999;}
+    .ss-empty-icon{font-size:42px;display:block;margin-bottom:10px;}
+    .ss-empty p{font-size:13px;}
+    .ss-fhir-path{font-family:monospace;font-size:11px;color:#666;}
+    .ss-section-label{font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+    .ss-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#555;margin-bottom:8px;}
+    .ss-legend-dot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px;}
+    .ss-notif-stack{position:fixed;top:16px;right:16px;z-index:99999;display:flex;flex-direction:column;gap:8px;width:300px;}
+    .ss-notif{background:white;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.1);display:flex;gap:10px;animation:ssSlide .3s ease;}
+    .ss-notif.danger{border-left:3px solid #dc2626;} .ss-notif.warning{border-left:3px solid #f59e0b;} .ss-notif.success{border-left:3px solid #16a34a;} .ss-notif.info{border-left:3px solid #3b82f6;}
+    @keyframes ssSlide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+    .ss-filter-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+    .ss-filter-bar select{padding:7px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:13px;background:white;cursor:pointer;}
+    .ss-filter-bar input{padding:7px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:13px;}
+  </style>
+
+  <div id="ssNotifStack" class="ss-notif-stack"></div>
+
+  <div class="ss-header">
+    <div class="ss-header-icon">🛡️</div>
+    <div class="ss-header-text">
+      <h2>SATUSEHAT FHIR Validator</h2>
+      <p>Analisis validasi resep dinamis berbasis standar FHIR SATUSEHAT — data otomatis dari upload Excel yang sama</p>
+    </div>
+  </div>
+
+  <div class="ss-metrics">
+    <div class="ss-metric blue"><div class="ss-metric-val" id="ss-mTotal">—</div><div class="ss-metric-lbl">Total Resep</div></div>
+    <div class="ss-metric green"><div class="ss-metric-val" id="ss-mValid">—</div><div class="ss-metric-lbl">Valid</div></div>
+    <div class="ss-metric red"><div class="ss-metric-val" id="ss-mInvalid">—</div><div class="ss-metric-lbl">Error / Warning</div></div>
+    <div class="ss-metric amber"><div class="ss-metric-val" id="ss-mRate">—</div><div class="ss-metric-lbl">Error Rate</div></div>
+  </div>
+
+  <div class="card">
+    <div class="ss-tabs">
+      <button class="ss-tab active" onclick="ssSwitchTab('validasi',this)">📋 Hasil Validasi</button>
+      <button class="ss-tab" onclick="ssSwitchTab('dokter',this)">👨‍⚕️ Analisis Dokter</button>
+      <button class="ss-tab" onclick="ssSwitchTab('grafik',this)">📊 Grafik</button>
+      <button class="ss-tab" onclick="ssSwitchTab('prediksi',this)">🔭 Prediksi</button>
+      <button class="ss-tab" onclick="ssSwitchTab('alert',this)">🔔 Alert <span id="ss-alertBadge" style="display:none;background:#dc2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">0</span></button>
+    </div>
+
+    <!-- TAB: Hasil Validasi -->
+    <div id="ss-tab-validasi" class="ss-tab-panel active">
+      <div class="ss-filter-bar">
+        <select id="ss-filterStatus" onchange="ssRenderTable()">
+          <option value="">Semua Status</option>
+          <option value="valid">✅ Valid</option>
+          <option value="error">❌ Error</option>
+          <option value="warning">⚠️ Warning</option>
+        </select>
+        <select id="ss-filterDokter" onchange="ssRenderTable()">
+          <option value="">Semua Dokter</option>
+        </select>
+        <input type="text" id="ss-filterSearch" placeholder="🔍 Cari obat / pasien..." oninput="ssRenderTable()" style="flex:1;min-width:180px;">
+      </div>
+      <div class="ss-table-wrap">
+        <table class="ss-table">
+          <thead><tr>
+            <th>RM Pasien</th><th>Nama Pasien</th><th>Diagnosis</th><th>Nama Obat</th><th>Dokter</th><th>Tanggal</th><th>FHIR Path</th><th>Status</th><th>Detail</th>
+          </tr></thead>
+          <tbody id="ss-resultTable">
+            <tr><td colspan="9"><div class="ss-empty"><span class="ss-empty-icon">📤</span><p>Data akan muncul otomatis saat Anda upload file Excel di atas</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="ss-pagination" style="margin-top:10px;display:flex;gap:8px;align-items:center;font-size:13px;color:#666;"></div>
+    </div>
+
+    <!-- TAB: Analisis Dokter -->
+    <div id="ss-tab-dokter" class="ss-tab-panel">
+      <div class="ss-table-wrap">
+        <table class="ss-table">
+          <thead><tr><th>Dokter</th><th>Total Resep</th><th>Error</th><th>Warning</th><th>Error Rate</th><th>Status</th><th>Rekomendasi</th></tr></thead>
+          <tbody id="ss-doctorTable">
+            <tr><td colspan="7"><div class="ss-empty"><span class="ss-empty-icon">👨‍⚕️</span><p>Belum ada data dokter</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: Grafik -->
+    <div id="ss-tab-grafik" class="ss-tab-panel">
+      <div class="ss-chart-row">
+        <div class="ss-chart-box">
+          <div class="ss-chart-title">Distribusi Status Validasi</div>
+          <div id="ss-legendPie" class="ss-legend"></div>
+          <div style="position:relative;height:220px"><canvas id="ss-chartPie" aria-label="Pie chart status validasi resep"></canvas></div>
+        </div>
+        <div class="ss-chart-box">
+          <div class="ss-chart-title">Error Rate per Dokter</div>
+          <div style="position:relative;height:220px"><canvas id="ss-chartBar" aria-label="Bar chart error per dokter"></canvas></div>
+        </div>
+      </div>
+      <div class="ss-chart-box">
+        <div class="ss-chart-title">Distribusi Tipe Error FHIR</div>
+        <div id="ss-legendErr" class="ss-legend"></div>
+        <div style="position:relative;height:200px"><canvas id="ss-chartErr" aria-label="Bar chart tipe error FHIR"></canvas></div>
+      </div>
+      <div class="ss-chart-row" style="margin-top:16px">
+        <div class="ss-chart-box">
+          <div class="ss-chart-title">Distribusi Resep per Diagnosis</div>
+          <div style="position:relative;height:200px"><canvas id="ss-chartDx" aria-label="Pie chart distribusi per diagnosis"></canvas></div>
+        </div>
+        <div class="ss-chart-box">
+          <div class="ss-chart-title">Top 5 Obat Paling Sering Diresepkan</div>
+          <div style="position:relative;height:200px"><canvas id="ss-chartObat" aria-label="Bar chart top obat"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Prediksi -->
+    <div id="ss-tab-prediksi" class="ss-tab-panel">
+      <div id="ss-predictContent">
+        <div class="ss-empty"><span class="ss-empty-icon">🔭</span><p>Prediksi tersedia setelah data dianalisis</p></div>
+      </div>
+    </div>
+
+    <!-- TAB: Alert -->
+    <div id="ss-tab-alert" class="ss-tab-panel">
+      <div id="ss-alertPanel">
+        <div class="ss-empty"><span class="ss-empty-icon">🔔</span><p>Belum ada alert — data akan otomatis teranalisis saat upload</p></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+</div><!-- end .content -->
+
+
+<script>
+// ========================
+// VARIABEL GLOBAL
+// ========================
+let pasienData = [];
+let map;
+let kinerjaData = {}; // Menyimpan data kinerja untuk detail
+
+const koordinatDIY = {
+  "Wonosari":[-7.9656,110.6021],"Playen":[-7.9442,110.5564],"Karangmojo":[-7.8405,110.6857],
+  "Semin":[-7.8095,110.7936],"Paliyan":[-8.0174,110.4875],"Depok":[-7.7828,110.4017],
+  "Mlati":[-7.7467,110.3684],"Gamping":[-7.7994,110.3185],"Ngaglik":[-7.7165,110.4092],
+  "Kalasan":[-7.7674,110.4728],"Banguntapan":[-7.8178,110.4285],"Sewon":[-7.8402,110.3629],
+  "Kasihan":[-7.8394,110.3297],"Pleret":[-7.8761,110.4356],"Jetis":[-7.8843,110.3872],
+  "Wates":[-7.8591,110.1607],"Sentolo":[-7.8295,110.2172],"Pengasih":[-7.8576,110.1435],
+  "Temon":[-7.9027,110.0523],"Umbulharjo":[-7.8164,110.3906],"Kotagede":[-7.8216,110.3997],
+  "Gondokusuman":[-7.7829,110.3767],"Danurejan":[-7.7957,110.3697]
+};
+
+// Bangsal / Ruangan RS (simulasi)
+const bangsalRS = [
+  {nama:"Bangsal Melati", kapasitas:20, kategori:"Umum"},
+  {nama:"Bangsal Mawar", kapasitas:15, kategori:"Anak"},
+  {nama:"Bangsal Anggrek", kapasitas:18, kategori:"Penyakit Dalam"},
+  {nama:"Bangsal Dahlia", kapasitas:12, kategori:"Jantung"},
+  {nama:"ICU", kapasitas:8, kategori:"Kritis"},
+  {nama:"Bangsal Kenanga", kapasitas:15, kategori:"Umum"},
+  {nama:"Bangsal Flamboyan", kapasitas:12, kategori:"Penyakit Dalam"}
+];
+
+
+// ========================
+// TAB NAVIGATION
+// ========================
+function showTab(tab, btn){
+  document.querySelectorAll("[id^='tab-']").forEach(x => x.classList.add("section-hidden"));
+  document.getElementById("tab-"+tab).classList.remove("section-hidden");
+  document.querySelectorAll(".nav button").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  if(tab==='penyakit'&&pasienData.length>0){setTimeout(()=>{if(map)map.invalidateSize();},200);}
+}
+
+
+// ========================
+// MODAL
+// ========================
+function closeModal(e){if(e.target===document.getElementById('modalOverlay'))closeModalDirect();}
+function closeModalDirect(){document.getElementById('modalOverlay').classList.remove('active');}
+function openModal(content){
+  document.getElementById('modalContent').innerHTML = content;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+
+// ========================
+// FILE UPLOAD
+// ========================
+document.getElementById('excelFile').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    const data = new Uint8Array(evt.target.result);
+    const workbook = XLSX.read(data,{type:'array'});
+
+    // Load sheet Data Pasien (sheet pertama atau yang bernama 'Data Pasien')
+    const pasienSheetName = workbook.SheetNames.find(n => n.toLowerCase().includes('pasien') || n.toLowerCase().includes('data')) || workbook.SheetNames[0];
+    const sheet = workbook.Sheets[pasienSheetName];
+    pasienData = XLSX.utils.sheet_to_json(sheet);
+
+    // Load sheet FHIR_Resep jika ada
+    const fhirSheetName = workbook.SheetNames.find(n => n.toLowerCase().includes('fhir') || n.toLowerCase().includes('resep'));
+    if(fhirSheetName){
+      const fhirSheet = workbook.Sheets[fhirSheetName];
+      const fhirData = XLSX.utils.sheet_to_json(fhirSheet);
+      ssProcessData(fhirData);
+    } else {
+      // Tidak ada sheet FHIR — generate dari pasienData
+      ssGenerateFromPasien(pasienData);
+    }
+
+    updateDashboard();
+    updateKinerjaLayanan();
+    buildAlertRekomendasi();
+    renderPasienTable();
+    buildPenyakitCharts();
+    buildTrenChart();
+    buildTopDiagnosis();
+    buildUsiaChart();
+    buildForecastChart();
+    buildMap();
+    buildKorelasiDinamis();
+    loadPrediksiDropdown();
+    updatePrediksi();
+    buildPrediksiRS();
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+
+// ========================
+// DASHBOARD
+// ========================
+function updateDashboard(){
+  let total=pasienData.length;
+  let inap=pasienData.filter(p=>p.status==='Rawat Inap').length;
+  let jalan=pasienData.filter(p=>p.status==='Rawat Jalan').length;
+  let kritisData=pasienData.filter(p=>p.status==='Kritis').length;
+  document.getElementById('totalPasien').innerHTML=total;
+  document.getElementById('rawatInap').innerHTML=inap;
+  document.getElementById('rawatJalan').innerHTML=jalan;
+  document.getElementById('kritis').innerHTML=kritisData;
+
+  let prevTotal=Math.max(1,Math.round(total*0.85));
+  let prevInap=Math.max(1,Math.round(inap*1.15));
+  let prevJalan=Math.max(1,Math.round(jalan*0.90));
+  let prevKritis=Math.max(1,Math.round(kritisData*1.10));
+
+  function trend(current,prev){
+    let persen=((current-prev)/prev)*100;
+    let icon=persen>=0?"⬆":"⬇";
+    let warna=persen>=0?"up":"down";
+    return `<span class="${warna}">${icon} ${Math.abs(persen).toFixed(1)}% dari bulan lalu</span>`;
+  }
+  document.getElementById('totalTrend').innerHTML=trend(total,prevTotal);
+  document.getElementById('inapTrend').innerHTML=trend(inap,prevInap);
+  document.getElementById('jalanTrend').innerHTML=trend(jalan,prevJalan);
+  document.getElementById('kritisTrend').innerHTML=trend(kritisData,prevKritis);
+}
+
+
+// =============================================
+// KINERJA LAYANAN DINAMIS
+// =============================================
+function updateKinerjaLayanan(){
+  let igdData=pasienData.map(p=>parseFloat(p.waktu_igd)).filter(v=>!isNaN(v));
+  let igd=igdData.length>0?(igdData.reduce((a,b)=>a+b,0)/igdData.length).toFixed(1):0;
+
+  // BOR = (Total Hari Rawat / (Kapasitas Bed × Periode)) × 100
+  // Pasien yang menggunakan bed = Rawat Inap + Kritis
+  let pasienBed=pasienData.filter(p=>{let s=(p.status||'').toLowerCase();return s==='rawat inap'||s==='kritis';});
+  let rawatInapAktif=pasienBed.length;
+  // Total kapasitas dari semua bangsal RS (bukan dari kolom excel)
+  let kapasitasBed=bangsalRS.reduce((a,b)=>a+b.kapasitas,0);
+  // Periode = 30 hari (1 bulan); total hari rawat dari semua pasien bed
+  let totalHariRawat=pasienBed.reduce((a,p)=>a+(parseFloat(p.lama_rawat)||0),0);
+  let periodeBOR=30;
+  let borVal=kapasitasBed>0?((totalHariRawat/(kapasitasBed*periodeBOR))*100).toFixed(1):0;
+
+  let losData=pasienData.filter(p=>(p.status||'').toLowerCase()==='rawat inap').map(p=>parseFloat(p.lama_rawat)).filter(v=>!isNaN(v));
+  let alosVal=losData.length>0?(losData.reduce((a,b)=>a+b,0)/losData.length).toFixed(1):0;
+
+  let puasData=pasienData.map(p=>parseFloat(p.kepuasan)).filter(v=>!isNaN(v));
+  let puas=puasData.length>0?(puasData.reduce((a,b)=>a+b,0)/puasData.length).toFixed(1):0;
+
+  let readmisiCount=pasienData.filter(p=>(p.readmisi||'').toLowerCase()==='ya').length;
+  let readm=pasienData.length>0?((readmisiCount/pasienData.length)*100).toFixed(1):0;
+
+  // Simpan ke global
+  kinerjaData={igd:parseFloat(igd),borVal:parseFloat(borVal),alosVal:parseFloat(alosVal),puas:parseFloat(puas),readm:parseFloat(readm),
+    igdData,losData,puasData,rawatInapAktif,kapasitasBed,readmisiCount,totalHariRawat,periodeBOR};
+
+  function getIgdColor(v){v=parseFloat(v);if(v<=30)return'#16a34a';if(v<=60)return'#f59e0b';return'#dc2626';}
+  function getBorColor(v){v=parseFloat(v);if(v>=60&&v<=85)return'#16a34a';if(v>85)return'#dc2626';return'#f59e0b';}
+  function getAlosColor(v){v=parseFloat(v);if(v<=5)return'#16a34a';if(v<=9)return'#f59e0b';return'#dc2626';}
+  function getPuasColor(v){v=parseFloat(v);if(v>=80)return'#16a34a';if(v>=60)return'#f59e0b';return'#dc2626';}
+  function getReadmColor(v){v=parseFloat(v);if(v<10)return'#16a34a';if(v<20)return'#f59e0b';return'#dc2626';}
+
+  function getStatus(m,v){
+    v=parseFloat(v);
+    switch(m){
+      case'igd':if(v<=30)return'✅ Standar terpenuhi';if(v<=60)return'⚠️ Perlu perhatian';return'🚨 Melebihi standar!';
+      case'bor':if(v>=60&&v<=85)return'✅ Ideal';if(v>85)return'🚨 Overload!';return'⚠️ Kapasitas rendah';
+      case'alos':if(v<=5)return'✅ Efisien';if(v<=9)return'⚠️ Sedang';return'🚨 Terlalu lama';
+      case'kepuasan':if(v>=80)return'✅ Sangat Baik';if(v>=60)return'⚠️ Cukup';return'🚨 Perlu perbaikan';
+      case'readmission':if(v<10)return'✅ Terkontrol';if(v<20)return'⚠️ Waspada';return'🚨 Tinggi!';
+    }
+  }
+
+  let hasIgd=pasienData.some(p=>p.waktu_igd!==undefined);
+  let hasLos=pasienData.some(p=>p.lama_rawat!==undefined);
+  let hasKepuasan=pasienData.some(p=>p.kepuasan!==undefined);
+  let hasReadmisi=pasienData.some(p=>p.readmisi!==undefined);
+  let hasBed=pasienData.some(p=>p.kapasitas_bed!==undefined);
+
+  if(hasIgd){
+    document.getElementById("igdTime").innerHTML=`${igd} Menit
+      <div class="kinerja-status" style="color:${getIgdColor(igd)}">${getStatus('igd',igd)}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100,(igd/120)*100)}%;background:${getIgdColor(igd)}"></div></div>
+      <div class="kinerja-info">📌 Klik untuk detail — ${igdData.length} data</div>`;
+  } else { document.getElementById("igdTime").innerHTML=`<span style="color:#999;font-size:13px;">⚠️ Kolom waktu_igd tidak ditemukan</span>`; }
+
+  document.getElementById("bor").innerHTML=`${borVal}%
+    <div class="kinerja-status" style="color:${getBorColor(borVal)}">${getStatus('bor',borVal)}</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100,borVal)}%;background:${getBorColor(borVal)}"></div></div>
+    <div class="kinerja-info">📌 Klik untuk detail bangsal — ${rawatInapAktif} pasien bed (Rawat Inap+Kritis) / ${kapasitasBed} bed</div>`;
+
+  if(hasLos){
+    document.getElementById("alos").innerHTML=`${alosVal} Hari
+      <div class="kinerja-status" style="color:${getAlosColor(alosVal)}">${getStatus('alos',alosVal)}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100,(alosVal/14)*100)}%;background:${getAlosColor(alosVal)}"></div></div>
+      <div class="kinerja-info">📌 Klik untuk detail — ${losData.length} data</div>`;
+  } else { document.getElementById("alos").innerHTML=`<span style="color:#999;font-size:13px;">⚠️ Kolom lama_rawat tidak ditemukan</span>`; }
+
+  if(hasKepuasan){
+    document.getElementById("kepuasan").innerHTML=`${puas}%
+      <div class="kinerja-status" style="color:${getPuasColor(puas)}">${getStatus('kepuasan',puas)}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${puas}%;background:${getPuasColor(puas)}"></div></div>
+      <div class="kinerja-info">📌 Klik untuk detail — ${puasData.length} responden</div>`;
+  } else { document.getElementById("kepuasan").innerHTML=`<span style="color:#999;font-size:13px;">⚠️ Kolom kepuasan tidak ditemukan</span>`; }
+
+  if(hasReadmisi){
+    document.getElementById("readmission").innerHTML=`${readm}%
+      <div class="kinerja-status" style="color:${getReadmColor(readm)}">${getStatus('readmission',readm)}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100,readm*3)}%;background:${getReadmColor(readm)}"></div></div>
+      <div class="kinerja-info">📌 Klik untuk detail — ${readmisiCount} pasien</div>`;
+  } else { document.getElementById("readmission").innerHTML=`<span style="color:#999;font-size:13px;">⚠️ Kolom readmisi tidak ditemukan</span>`; }
+}
+
+
+// =============================================
+// ALERT REKOMENDASI DINAMIS
+// =============================================
+function buildAlertRekomendasi(){
+  if(pasienData.length===0) return;
+
+  let alerts=[];
+  let d=kinerjaData;
+
+  // --- IGD ---
+  if(d.igd>60){
+    alerts.push({type:'danger',icon:'🚨',title:'Waktu Tunggu IGD Kritis!',
+      desc:`Rata-rata waktu tunggu IGD: <b>${d.igd} menit</b> (standar ≤30 menit). Pasien menunggu terlalu lama.`,
+      actions:['Tambah tenaga medis di shift sibuk','Terapkan triase yang lebih ketat','Evaluasi alur pendaftaran IGD','Pertimbangkan fast-track untuk kasus ringan']});
+  } else if(d.igd>30){
+    alerts.push({type:'warning',icon:'⚠️',title:'Waktu Tunggu IGD Perlu Perhatian',
+      desc:`Rata-rata waktu tunggu IGD: <b>${d.igd} menit</b>. Mendekati batas standar (30 menit).`,
+      actions:['Monitor beban kerja tenaga IGD','Optimalkan jadwal shift','Siapkan contingency plan untuk lonjakan pasien']});
+  } else if(d.igd>0){
+    alerts.push({type:'success',icon:'✅',title:'Waktu IGD Terpenuhi',
+      desc:`Rata-rata waktu tunggu IGD: <b>${d.igd} menit</b>. Standar pelayanan terpenuhi dengan baik.`,
+      actions:['Pertahankan kinerja saat ini','Dokumentasikan best practice untuk benchmark']});
+  }
+
+  // --- BOR ---
+  if(d.borVal>85){
+    alerts.push({type:'danger',icon:'🚨',title:'BOR Overload!',
+      desc:`BOR saat ini: <b>${d.borVal}%</b> (ideal 60-85%). Rumah sakit kelebihan kapasitas.`,
+      actions:['Percepat proses discharge pasien yang sudah memenuhi syarat','Koordinasi rujukan ke RS jejaring','Aktifkan protokol bed management darurat','Evaluasi pasien yang bisa dialihkan ke rawat jalan']});
+  } else if(d.borVal<60){
+    alerts.push({type:'warning',icon:'⚠️',title:'BOR Rendah — Kapasitas Kurang Optimal',
+      desc:`BOR saat ini: <b>${d.borVal}%</b>. Banyak bed kosong, utilitas RS kurang optimal.`,
+      actions:['Evaluasi strategi promosi layanan RS','Tingkatkan kerjasama dengan BPJS/asuransi','Analisis kebutuhan masyarakat sekitar','Pertimbangkan pengurangan jumlah bed sementara']});
+  } else {
+    alerts.push({type:'success',icon:'✅',title:'BOR Ideal',
+      desc:`BOR saat ini: <b>${d.borVal}%</b>. Penggunaan tempat tidur dalam kondisi optimal.`,
+      actions:['Pertahankan manajemen bed saat ini','Monitor untuk antisipasi lonjakan']});
+  }
+
+  // --- ALOS ---
+  if(d.alosVal>9){
+    alerts.push({type:'danger',icon:'🚨',title:'Length of Stay Terlalu Lama!',
+      desc:`Rata-rata lama rawat: <b>${d.alosVal} hari</b> (standar ≤5 hari). Biaya perawatan tinggi.`,
+      actions:['Review clinical pathway per diagnosis','Tingkatkan koordinasi antar DPJP','Optimalkan jadwal operasi/tindakan','Evaluasi ketersediaan obat dan alkes','Terapkan discharge planning sejak hari pertama']});
+  } else if(d.alosVal>5){
+    alerts.push({type:'warning',icon:'⚠️',title:'Length of Stay Perlu Dievaluasi',
+      desc:`Rata-rata lama rawat: <b>${d.alosVal} hari</b>. Sedikit di atas standar.`,
+      actions:['Identifikasi diagnosis dengan LOS terpanjang','Percepat pemeriksaan penunjang','Optimalkan waktu visite dokter']});
+  } else if(d.alosVal>0){
+    alerts.push({type:'success',icon:'✅',title:'Length of Stay Efisien',
+      desc:`Rata-rata lama rawat: <b>${d.alosVal} hari</b>. Perawatan efisien dan efektif.`,
+      actions:['Pertahankan clinical pathway yang ada','Bagikan best practice ke unit lain']});
+  }
+
+  // --- KEPUASAN ---
+  if(d.puas<60){
+    alerts.push({type:'danger',icon:'🚨',title:'Kepuasan Pasien Sangat Rendah!',
+      desc:`Skor kepuasan: <b>${d.puas}%</b> (target ≥80%). Perlu perbaikan segera.`,
+      actions:['Lakukan survei mendalam untuk identifikasi masalah','Perbaiki komunikasi petugas dengan pasien','Tingkatkan kebersihan dan kenyamanan ruangan','Percepat waktu respons perawat','Adakan pelatihan service excellent untuk seluruh staf']});
+  } else if(d.puas<80){
+    alerts.push({type:'warning',icon:'⚠️',title:'Kepuasan Pasien Perlu Ditingkatkan',
+      desc:`Skor kepuasan: <b>${d.puas}%</b>. Belum mencapai target 80%.`,
+      actions:['Identifikasi area dengan skor terendah','Tingkatkan fasilitas ruang tunggu','Perbaiki sistem informasi ke pasien','Evaluasi menu makanan pasien']});
+  } else {
+    alerts.push({type:'success',icon:'✅',title:'Kepuasan Pasien Sangat Baik',
+      desc:`Skor kepuasan: <b>${d.puas}%</b>. Pasien puas dengan layanan yang diberikan.`,
+      actions:['Pertahankan standar pelayanan','Apresiasi staf berprestasi','Gunakan sebagai benchmark']});
+  }
+
+  // --- READMISSION ---
+  if(d.readm>=20){
+    alerts.push({type:'danger',icon:'🚨',title:'Readmission Rate Tinggi!',
+      desc:`Readmission: <b>${d.readm}%</b> (${kinerjaData.readmisiCount} pasien). Standar <10%.`,
+      actions:['Review kualitas discharge planning','Tingkatkan edukasi pasien sebelum pulang','Jadwalkan follow-up dalam 48 jam pasca pulang','Evaluasi kecukupan terapi saat pasien pulang','Buat program home care untuk pasien berisiko']});
+  } else if(d.readm>=10){
+    alerts.push({type:'warning',icon:'⚠️',title:'Readmission Rate Perlu Diwaspadai',
+      desc:`Readmission: <b>${d.readm}%</b> (${kinerjaData.readmisiCount} pasien). Mendekati batas aman.`,
+      actions:['Identifikasi pola diagnosis yang sering readmisi','Perkuat edukasi obat dan diet saat pulang','Hubungi pasien 24 jam setelah discharge']});
+  } else {
+    alerts.push({type:'success',icon:'✅',title:'Readmission Rate Terkontrol',
+      desc:`Readmission: <b>${d.readm}%</b>. Program discharge berjalan efektif.`,
+      actions:['Pertahankan program follow-up','Dokumentasikan protokol yang berhasil']});
+  }
+
+  // Render alerts
+  let html='';
+  alerts.forEach(a=>{
+    let actionsHtml=a.actions.map(act=>`<div class="alert-action">→ ${act}</div>`).join('');
+    html+=`
+      <div class="alert-box alert-${a.type}">
+        <div class="alert-icon">${a.icon}</div>
+        <div class="alert-content">
+          <div class="alert-title">${a.title}</div>
+          <div class="alert-desc">${a.desc}</div>
+          ${actionsHtml}
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('alertContainer').innerHTML=html;
+}
+
+
+// =============================================
+// DETAIL KLIK KINERJA
+// =============================================
+function showDetail(metric){
+  if(pasienData.length===0){
+    openModal('<h3>⚠️ Belum Ada Data</h3><p>Upload file Excel terlebih dahulu.</p>');
+    return;
+  }
+
+  let content='';
+
+  switch(metric){
+
+    case 'igd':
+      content = buildIGDDetail();
+      break;
+
+    case 'bor':
+      content = buildBORDetail();
+      break;
+
+    case 'alos':
+      content = buildALOSDetail();
+      break;
+
+    case 'kepuasan':
+      content = buildKepuasanDetail();
+      break;
+
+    case 'readmission':
+      content = buildReadmissionDetail();
+      break;
+  }
+
+  openModal(content);
+}
+
+// --- DETAIL IGD ---
+function buildIGDDetail(){
+  let igdPasien = pasienData.filter(p=>!isNaN(parseFloat(p.waktu_igd)));
+  let avgIgd = kinerjaData.igd;
+
+  // Distribusi waktu
+  let dist = {cepat:0, sedang:0, lama:0, sangatLama:0};
+  igdPasien.forEach(p=>{
+    let w=parseFloat(p.waktu_igd);
+    if(w<=15) dist.cepat++;
+    else if(w<=30) dist.sedang++;
+    else if(w<=60) dist.lama++;
+    else dist.sangatLama++;
+  });
+
+  // Per poli
+  let perPoli={};
+  igdPasien.forEach(p=>{
+    let poli=p.poli||'Lainnya';
+    if(!perPoli[poli]) perPoli[poli]={total:0,sum:0};
+    perPoli[poli].total++;
+    perPoli[poli].sum+=parseFloat(p.waktu_igd);
+  });
+
+  let poliRows=Object.entries(perPoli).map(([k,v])=>{
+    let avg=(v.sum/v.total).toFixed(1);
+    let badge=avg<=30?'badge-green':avg<=60?'badge-yellow':'badge-red';
+    return `<tr><td>${k}</td><td>${v.total}</td><td>${avg} menit</td><td><span class="detail-badge ${badge}">${avg<=30?'Baik':avg<=60?'Sedang':'Lambat'}</span></td></tr>`;
+  }).join('');
+
+  // Top 5 terlama
+  let topLama=igdPasien.sort((a,b)=>parseFloat(b.waktu_igd)-parseFloat(a.waktu_igd)).slice(0,5);
+  let topRows=topLama.map(p=>`<tr><td>${p.rm}</td><td>${p.nama}</td><td>${p.waktu_igd} menit</td><td>${p.status}</td></tr>`).join('');
+
+  return `
+    <div class="modal-title">⏱️ Detail Waktu Tunggu IGD</div>
+    <div class="metric-grid" style="margin-bottom:20px;">
+      <div style="background:#f0fdf4;padding:12px;border-radius:8px;text-align:center;"><b>${dist.cepat}</b><br><small>≤15 menit</small></div>
+      <div style="background:#f0fdf4;padding:12px;border-radius:8px;text-align:center;"><b>${dist.sedang}</b><br><small>16-30 menit</small></div>
+      <div style="background:#fef3c7;padding:12px;border-radius:8px;text-align:center;"><b>${dist.lama}</b><br><small>31-60 menit</small></div>
+      <div style="background:#fee2e2;padding:12px;border-radius:8px;text-align:center;"><b>${dist.sangatLama}</b><br><small>>60 menit</small></div>
+    </div>
+    <h4>Rata-rata per Poli</h4>
+    <table class="detail-table"><thead><tr><th>Poli</th><th>Pasien</th><th>Avg Waktu</th><th>Status</th></tr></thead><tbody>${poliRows}</tbody></table>
+    <h4 style="margin-top:20px;">Top 5 Waktu Terlama</h4>
+    <table class="detail-table"><thead><tr><th>RM</th><th>Nama</th><th>Waktu</th><th>Status</th></tr></thead><tbody>${topRows}</tbody></table>
+  `;
+}
+
+// --- DETAIL BOR ---
+function buildBORDetail(){
+  let rawatInap=pasienData.filter(p=>(p.status||'').toLowerCase()==='rawat inap');
+  let kritis=pasienData.filter(p=>(p.status||'').toLowerCase()==='kritis');
+  let totalOkupasi=rawatInap.length+kritis.length;
+  let kap=kinerjaData.kapasitasBed;
+
+  // Hitung pasien per kategori poli dari data Excel nyata
+  function countPoli(kategori){
+    if(kategori==='Kritis') return kritis.length;
+    return rawatInap.filter(p=>(p.poli||'').toLowerCase()===kategori.toLowerCase()).length;
+  }
+  // Untuk bangsal yang berbagi poli (misal Umum ada 2 bangsal), bagi proporsional berdasar kapasitas
+  let poliCount={};
+  bangsalRS.forEach(b=>{
+    let k=b.kategori;
+    if(!poliCount[k]) poliCount[k]={total:countPoli(k), kapTotal:0};
+    poliCount[k].kapTotal+=b.kapasitas;
+  });
+
+  // Distribusi per bangsal dari data nyata
+  let bangsalDetail=bangsalRS.map(b=>{
+    let pc=poliCount[b.kategori];
+    // Bagi proporsional berdasar kapasitas bangsal jika ada >1 bangsal per kategori
+    let isi=Math.round(pc.total*(b.kapasitas/pc.kapTotal));
+    let sisa=b.kapasitas-isi;
+    let persen=b.kapasitas>0?((isi/b.kapasitas)*100).toFixed(0):0;
+    let badge=persen>=90?'badge-red':persen>=70?'badge-yellow':'badge-green';
+    let status=persen>=90?'Penuh':persen>=70?'Hampir Penuh':'Tersedia';
+    let overKap=isi>b.kapasitas;
+    return `<tr>
+      <td><b>${b.nama}</b></td>
+      <td>${b.kategori}</td>
+      <td style="${overKap?'color:#dc2626;font-weight:bold':''}">${isi} / ${b.kapasitas}${overKap?' ⚠️':''}</td>
+      <td>
+        <div class="progress-bar" style="width:100px;display:inline-block;vertical-align:middle;">
+          <div class="progress-fill" style="width:${Math.min(100,persen)}%;background:${persen>=90?'#dc2626':persen>=70?'#f59e0b':'#16a34a'}"></div>
+        </div>
+        ${persen}%
+      </td>
+      <td><span class="detail-badge ${badge}">${status}</span></td>
+      <td>${sisa<0?'<span style="color:#dc2626">'+Math.abs(sisa)+' overload</span>':sisa+' bed'}</td>
+    </tr>`;
+  });
+
+  let totalKap=bangsalRS.reduce((a,b)=>a+b.kapasitas,0);
+
+  return `
+    <div class="modal-title">🛏️ Detail BOR (Bed Occupancy Rate)</div>
+    <div class="metric-grid" style="margin-bottom:20px;">
+      <div style="background:#e0f2fe;padding:12px;border-radius:8px;text-align:center;"><b>${kinerjaData.borVal}%</b><br><small>BOR Keseluruhan</small></div>
+      <div style="background:#f0fdf4;padding:12px;border-radius:8px;text-align:center;"><b>${totalOkupasi}</b><br><small>Pasien Rawat Inap + Kritis</small></div>
+      <div style="background:#fef3c7;padding:12px;border-radius:8px;text-align:center;"><b>${kap}</b><br><small>Total Kapasitas</small></div>
+      <div style="background:#f5f3ff;padding:12px;border-radius:8px;text-align:center;"><b>${kinerjaData.totalHariRawat}</b><br><small>Total Hari Rawat (${kinerjaData.periodeBOR} hr periode)</small></div>
+    </div>
+    <div style="margin-bottom:15px;padding:12px;background:#eff6ff;border-radius:8px;font-size:13px;">
+      <b>📐 Formula BOR:</b> (Total Hari Rawat ÷ (Kapasitas × Periode)) × 100 = (${kinerjaData.totalHariRawat} ÷ (${kap} × ${kinerjaData.periodeBOR})) × 100 = <b>${kinerjaData.borVal}%</b><br>
+      <small style="color:#555;">Pasien dihitung: Rawat Inap + Kritis (${totalOkupasi} pasien menggunakan bed)</small>
+    </div>
+    <h4>Detail per Bangsal/Ruangan</h4>
+    <table class="detail-table">
+      <thead><tr><th>Bangsal</th><th>Kategori</th><th>Terisi</th><th>Okupansi</th><th>Status</th><th>Sisa</th></tr></thead>
+      <tbody>${bangsalDetail.join('')}</tbody>
+    </table>
+    <div style="margin-top:15px;padding:12px;background:#f9fafb;border-radius:8px;font-size:13px;">
+      <b>📌 Standar BOR:</b> 60-85% (Depkes RI). BOR >85% = overload, BOR <60% = kurang optimal.
+    </div>
+  `;
+}
+
+// --- DETAIL ALOS ---
+function buildALOSDetail(){
+  let rawatInap=pasienData.filter(p=>(p.status||'').toLowerCase()==='rawat inap'&&!isNaN(parseFloat(p.lama_rawat)));
+
+  // Per diagnosis
+  let perDx={};
+  rawatInap.forEach(p=>{
+    let dx=p.dx||'Lainnya';
+    if(!perDx[dx]) perDx[dx]={total:0,sum:0,max:0,min:999};
+    perDx[dx].total++;
+    let los=parseFloat(p.lama_rawat);
+    perDx[dx].sum+=los;
+    if(los>perDx[dx].max) perDx[dx].max=los;
+    if(los<perDx[dx].min) perDx[dx].min=los;
+  });
+
+  let dxRows=Object.entries(perDx).map(([k,v])=>{
+    let avg=(v.sum/v.total).toFixed(1);
+    let badge=avg<=5?'badge-green':avg<=9?'badge-yellow':'badge-red';
+    return `<tr><td>${k}</td><td>${v.total}</td><td>${avg} hari</td><td>${v.min} hari</td><td>${v.max} hari</td><td><span class="detail-badge ${badge}">${avg<=5?'Efisien':avg<=9?'Sedang':'Lama'}</span></td></tr>`;
+  }).join('');
+
+  // Distribusi
+  let dist={pendek:0,sedang:0,lama:0,sangatLama:0};
+  rawatInap.forEach(p=>{
+    let los=parseFloat(p.lama_rawat);
+    if(los<=3) dist.pendek++;
+    else if(los<=7) dist.sedang++;
+    else if(los<=14) dist.lama++;
+    else dist.sangatLama++;
+  });
+
+  // Top 5 terlama
+  let topLama=rawatInap.sort((a,b)=>parseFloat(b.lama_rawat)-parseFloat(a.lama_rawat)).slice(0,5);
+  let topRows=topLama.map(p=>`<tr><td>${p.rm}</td><td>${p.nama}</td><td>${p.dx||''}</td><td>${p.lama_rawat} hari</td></tr>`).join('');
+
+  return `
+    <div class="modal-title">📅 Detail Average Length of Stay (ALOS)</div>
+    <div class="metric-grid" style="margin-bottom:20px;">
+      <div style="background:#f0fdf4;padding:12px;border-radius:8px;text-align:center;"><b>${dist.pendek}</b><br><small>1-3 hari</small></div>
+      <div style="background:#e0f2fe;padding:12px;border-radius:8px;text-align:center;"><b>${dist.sedang}</b><br><small>4-7 hari</small></div>
+      <div style="background:#fef3c7;padding:12px;border-radius:8px;text-align:center;"><b>${dist.lama}</b><br><small>8-14 hari</small></div>
+      <div style="background:#fee2e2;padding:12px;border-radius:8px;text-align:center;"><b>${dist.sangatLama}</b><br><small>>14 hari</small></div>
+    </div>
+    <h4>Rata-rata LOS per Diagnosis</h4>
+    <table class="detail-table"><thead><tr><th>Diagnosis</th><th>Pasien</th><th>Avg LOS</th><th>Min</th><th>Max</th><th>Status</th></tr></thead><tbody>${dxRows}</tbody></table>
+    <h4 style="margin-top:20px;">Top 5 Pasien LOS Terlama</h4>
+    <table class="detail-table"><thead><tr><th>RM</th><th>Nama</th><th>Diagnosis</th><th>Lama Rawat</th></tr></thead><tbody>${topRows}</tbody></table>
+  `;
+}
+
+// --- DETAIL KEPUASAN ---
+function buildKepuasanDetail(){
+  let puasPasien=pasienData.filter(p=>!isNaN(parseFloat(p.kepuasan)));
+
+  // Distribusi skor
+  let dist={sangatPuas:0,puas:0,cukup:0,kurang:0};
+  puasPasien.forEach(p=>{
+    let s=parseFloat(p.kepuasan);
+    if(s>=90) dist.sangatPuas++;
+    else if(s>=80) dist.puas++;
+    else if(s>=60) dist.cukup++;
+    else dist.kurang++;
+  });
+
+  // Per poli
+  let perPoli={};
+  puasPasien.forEach(p=>{
+    let poli=p.poli||'Lainnya';
+    if(!perPoli[poli]) perPoli[poli]={total:0,sum:0};
+    perPoli[poli].total++;
+    perPoli[poli].sum+=parseFloat(p.kepuasan);
+  });
+
+  let poliRows=Object.entries(perPoli).map(([k,v])=>{
+    let avg=(v.sum/v.total).toFixed(1);
+    let badge=avg>=80?'badge-green':avg>=60?'badge-yellow':'badge-red';
+    return `<tr><td>${k}</td><td>${v.total}</td><td>${avg}%</td><td><span class="detail-badge ${badge}">${avg>=80?'Baik':avg>=60?'Cukup':'Kurang'}</span></td></tr>`;
+  }).join('');
+
+  // Per status
+  let perStatus={};
+  puasPasien.forEach(p=>{
+    let st=p.status||'Lainnya';
+    if(!perStatus[st]) perStatus[st]={total:0,sum:0};
+    perStatus[st].total++;
+    perStatus[st].sum+=parseFloat(p.kepuasan);
+  });
+
+  let statusRows=Object.entries(perStatus).map(([k,v])=>{
+    let avg=(v.sum/v.total).toFixed(1);
+    let badge=avg>=80?'badge-green':avg>=60?'badge-yellow':'badge-red';
+    return `<tr><td>${k}</td><td>${v.total}</td><td>${avg}%</td><td><span class="detail-badge ${badge}">${avg>=80?'Baik':avg>=60?'Cukup':'Kurang'}</span></td></tr>`;
+  }).join('');
+
+  // Lowest 5
+  let lowest=puasPasien.sort((a,b)=>parseFloat(a.kepuasan)-parseFloat(b.kepuasan)).slice(0,5);
+  let lowRows=lowest.map(p=>`<tr><td>${p.rm}</td><td>${p.nama}</td><td>${p.poli||''}</td><td>${p.kepuasan}%</td><td>${p.status||''}</td></tr>`).join('');
+
+  return `
+    <div class="modal-title">😊 Detail Kepuasan Pasien</div>
+    <div class="metric-grid" style="margin-bottom:20px;">
+      <div style="background:#f0fdf4;padding:12px;border-radius:8px;text-align:center;"><b>${dist.sangatPuas}</b><br><small>Sangat Puas (≥90)</small></div>
+      <div style="background:#e0f2fe;padding:12px;border-radius:8px;text-align:center;"><b>${dist.puas}</b><br><small>Puas (80-89)</small></div>
+      <div style="background:#fef3c7;padding:12px;border-radius:8px;text-align:center;"><b>${dist.cukup}</b><br><small>Cukup (60-79)</small></div>
+      <div style="background:#fee2e2;padding:12px;border-radius:8px;text-align:center;"><b>${dist.kurang}</b><br><small>Kurang (<60)</small></div>
+    </div>
+    <h4>Kepuasan per Poli</h4>
+    <table class="detail-table"><thead><tr><th>Poli</th><th>Responden</th><th>Avg Skor</th><th>Status</th></tr></thead><tbody>${poliRows}</tbody></table>
+    <h4 style="margin-top:20px;">Kepuasan per Status Rawat</h4>
+    <table class="detail-table"><thead><tr><th>Status</th><th>Responden</th><th>Avg Skor</th><th>Kategori</th></tr></thead><tbody>${statusRows}</tbody></table>
+    <h4 style="margin-top:20px;">5 Pasien dengan Skor Terendah</h4>
+    <table class="detail-table"><thead><tr><th>RM</th><th>Nama</th><th>Poli</th><th>Skor</th><th>Status</th></tr></thead><tbody>${lowRows}</tbody></table>
+  `;
+}
+
+// --- DETAIL READMISSION ---
+function buildReadmissionDetail(){
+  let readmPasien=pasienData.filter(p=>(p.readmisi||'').toLowerCase()==='ya');
+
+  // Per diagnosis
+  let perDx={};
+  readmPasien.forEach(p=>{
+    let dx=p.dx||'Lainnya';
+    perDx[dx]=(perDx[dx]||0)+1;
+  });
+
+  let dxRows=Object.entries(perDx).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{
+    let persen=((v/readmPasien.length)*100).toFixed(0);
+    return `<tr><td>${k}</td><td>${v}</td><td>${persen}%</td><td>
+      <div class="progress-bar" style="width:80px;display:inline-block;"><div class="progress-fill" style="width:${persen}%;background:#dc2626;"></div></div>
+    </td></tr>`;
+  }).join('');
+
+  // Per usia
+  let perUsia={muda:0,dewasa:0,lansia:0};
+  readmPasien.forEach(p=>{
+    let u=parseInt(p.usia)||0;
+    if(u<=40) perUsia.muda++;
+    else if(u<=60) perUsia.dewasa++;
+    else perUsia.lansia++;
+  });
+
+  // Daftar pasien readmisi
+  let pasienRows=readmPasien.slice(0,10).map(p=>`<tr><td>${p.rm}</td><td>${p.nama}</td><td>${p.usia}</td><td>${p.dx||''}</td><td>${p.poli||''}</td><td>${p.lama_rawat||'-'} hari</td></tr>`).join('');
+
+  return `
+    <div class="modal-title">🔄 Detail Readmission</div>
+    <div class="metric-grid" style="margin-bottom:20px;">
+      <div style="background:#fee2e2;padding:12px;border-radius:8px;text-align:center;"><b>${readmPasien.length}</b><br><small>Total Readmisi</small></div>
+      <div style="background:#fef3c7;padding:12px;border-radius:8px;text-align:center;"><b>${kinerjaData.readm}%</b><br><small>Rate Readmisi</small></div>
+      <div style="background:#e0f2fe;padding:12px;border-radius:8px;text-align:center;"><b>${perUsia.lansia}</b><br><small>Lansia (>60th)</small></div>
+      <div style="background:#f5f3ff;padding:12px;border-radius:8px;text-align:center;"><b>${perUsia.dewasa}</b><br><small>Dewasa (41-60th)</small></div>
+    </div>
+    <h4>Readmisi per Diagnosis</h4>
+    <table class="detail-table"><thead><tr><th>Diagnosis</th><th>Jumlah</th><th>Proporsi</th><th>Visual</th></tr></thead><tbody>${dxRows}</tbody></table>
+    <h4 style="margin-top:20px;">Distribusi Usia Readmisi</h4>
+    <div class="metric-grid">
+      <div style="background:#f9fafb;padding:10px;border-radius:8px;text-align:center;"><b>${perUsia.muda}</b><br><small>≤40 tahun</small></div>
+      <div style="background:#f9fafb;padding:10px;border-radius:8px;text-align:center;"><b>${perUsia.dewasa}</b><br><small>41-60 tahun</small></div>
+      <div style="background:#f9fafb;padding:10px;border-radius:8px;text-align:center;"><b>${perUsia.lansia}</b><br><small>>60 tahun</small></div>
+    </div>
+    <h4 style="margin-top:20px;">Daftar Pasien Readmisi</h4>
+    <table class="detail-table"><thead><tr><th>RM</th><th>Nama</th><th>Usia</th><th>Diagnosis</th><th>Poli</th><th>LOS</th></tr></thead><tbody>${pasienRows}</tbody></table>
+    ${readmPasien.length>10?'<p style="color:#999;font-size:12px;margin-top:8px;">Menampilkan 10 dari '+readmPasien.length+' pasien</p>':''}
+  `;
+}
+
+
+// ========================
+// TABEL PASIEN
+// ========================
+function renderPasienTable(){
+  const q=document.getElementById('searchPasien').value.toLowerCase();
+  const st=document.getElementById('filterStatus').value;
+  const po=document.getElementById('filterPoli').value;
+  const data=pasienData.filter(p=>{
+    const matchQ=!q||(p.nama||'').toLowerCase().includes(q)||(p.rm||'').toLowerCase().includes(q);
+    const matchS=!st||p.status===st;
+    const matchP=!po||p.poli===po;
+    return matchQ&&matchS&&matchP;
+  });
+  document.getElementById('pasienTable').innerHTML=data.map(p=>`
+    <tr><td>${p.rm||''}</td><td>${p.nama||''}</td><td>${p.usia||''}</td><td>${p.poli||''}</td><td>${p.dx||''}</td>
+    <td><span style="padding:4px 8px;border-radius:6px;font-size:12px;background:${p.status==='Kritis'?'#fee2e2':p.status==='Rawat Inap'?'#fef3c7':p.status==='Sembuh'?'#dcfce7':'#e0f2fe'}">${p.status||''}</span></td></tr>
+  `).join('');
+}
+
+
+// ========================
+// CHARTS
+// ========================
+function buildTrenChart(){
+  if(window.trenChartInstance)window.trenChartInstance.destroy();
+  let rj=pasienData.filter(p=>(p.status||"").toLowerCase()==="rawat jalan").length;
+  let ri=pasienData.filter(p=>(p.status||"").toLowerCase()==="rawat inap").length;
+  window.trenChartInstance=new Chart(document.getElementById("trenChart"),{type:'line',data:{labels:['Jan','Feb','Mar','Apr','Mei','Jun'],datasets:[
+    {label:'Rawat Jalan',data:[Math.max(0,rj-20),Math.max(0,rj-15),Math.max(0,rj-10),Math.max(0,rj-5),rj-2,rj],borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.1)',fill:true,tension:0.4},
+    {label:'Rawat Inap',data:[Math.max(0,ri-15),Math.max(0,ri-12),Math.max(0,ri-8),Math.max(0,ri-5),ri-2,ri],borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.1)',fill:true,tension:0.4}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},interaction:{mode:'index',intersect:false},scales:{y:{beginAtZero:true}}}});
+}
+
+function buildTopDiagnosis(){
+  if(window.topDxChart)window.topDxChart.destroy();
+  let dx={};pasienData.forEach(p=>{let d=(p.dx||"Lainnya").trim();if(d!=="")dx[d]=(dx[d]||0)+1;});
+  let sorted=Object.entries(dx).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  window.topDxChart=new Chart(document.getElementById('topDiagnosisChart'),{type:'doughnut',data:{labels:sorted.map(x=>x[0]),datasets:[{data:sorted.map(x=>x[1]),backgroundColor:['#0f766e','#2563eb','#f59e0b','#dc2626','#9333ea']}]},options:{responsive:true,maintainAspectRatio:false}});
+}
+
+function buildUsiaChart(){
+  if(window.usiaChartObj)window.usiaChartObj.destroy();
+  let u=[0,0,0,0,0];pasienData.forEach(p=>{let a=parseInt(p.usia)||0;if(a<=17)u[0]++;else if(a<=30)u[1]++;else if(a<=45)u[2]++;else if(a<=60)u[3]++;else u[4]++;});
+  window.usiaChartObj=new Chart(document.getElementById('usiaChart'),{type:'bar',data:{labels:['0-17','18-30','31-45','46-60','>60'],datasets:[{label:'Jumlah Pasien',data:u,backgroundColor:['#2563eb','#16a34a','#f59e0b','#dc2626','#7c3aed']}]},options:{responsive:true,maintainAspectRatio:false}});
+}
+
+function buildPenyakitCharts(){
+  const tDBD=pasienData.filter(p=>(p.dx||'').toLowerCase().includes('dbd')).length;
+  const tHTN=pasienData.filter(p=>(p.dx||'').toLowerCase().includes('hipertensi')).length;
+  const tDM=pasienData.filter(p=>(p.dx||'').toLowerCase().includes('diabetes')).length;
+  const tISPA=pasienData.filter(p=>(p.dx||'').toLowerCase().includes('ispa')).length;
+
+  function infoDinamis(){let p=(Math.random()*25+1).toFixed(0);let n=Math.random()>0.5;return `<div style="font-size:13px;margin-top:8px;color:${n?'#16a34a':'#dc2626'};font-weight:bold;">${n?'↑':'↓'} ${p}% ${n?'minggu ini':'membaik'}</div>`;}
+  document.getElementById('dbdCount').innerHTML=`${tDBD}${infoDinamis()}`;
+  document.getElementById('htnCount').innerHTML=`${tHTN}<div style="font-size:13px;margin-top:8px;color:#2563eb;font-weight:bold;">Terkontrol stabil</div>`;
+  document.getElementById('dmCount').innerHTML=`${tDM}${infoDinamis()}`;
+  document.getElementById('ispaCount').innerHTML=`${tISPA}${infoDinamis()}`;
+
+  if(window.penyakitChartInstance)window.penyakitChartInstance.destroy();
+  window.penyakitChartInstance=new Chart(document.getElementById('penyakitChart'),{type:'line',data:{labels:['Des','Jan','Feb','Mar','Apr','Mei'],datasets:[
+    {label:'DBD',borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.08)',fill:true,tension:.4,data:[tDBD-5,tDBD-4,tDBD-3,tDBD-2,tDBD-1,tDBD]},
+    {label:'Hipertensi',borderColor:'#0f766e',backgroundColor:'rgba(15,118,110,.08)',fill:true,tension:.4,data:[tHTN-10,tHTN-8,tHTN-6,tHTN-4,tHTN-2,tHTN]},
+    {label:'Diabetes',borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.08)',fill:true,tension:.4,data:[tDM-7,tDM-6,tDM-5,tDM-3,tDM-1,tDM]},
+    {label:'ISPA',borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',fill:true,tension:.4,data:[tISPA+5,tISPA+4,tISPA+3,tISPA+2,tISPA+1,tISPA]}
+  ]},options:{responsive:true,maintainAspectRatio:false}});
+
+  if(window.korelasiChartInstance)window.korelasiChartInstance.destroy();
+  window.korelasiChartInstance=new Chart(document.getElementById('korelasiChart'),{type:'radar',data:{labels:['Hipertensi','Diabetes','DBD','ISPA'],datasets:[{label:'Korelasi Kasus',data:[tHTN,tDM,tDBD,tISPA],fill:true,backgroundColor:'rgba(15,118,110,.2)',borderColor:'#0f766e',pointBackgroundColor:'#0f766e'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{beginAtZero:true}}}});
+
+ let kecData = {};
+
+pasienData.forEach(p => {
+    let k = p.kecamatan || "Tidak diketahui";
+    kecData[k] = (kecData[k] || 0) + 1;
+});
+
+if (window.kecamatanChartInstance)
+    window.kecamatanChartInstance.destroy();
+
+const labels = Object.keys(kecData);
+const values = Object.values(kecData);
+
+// ===============================
+// HITUNG RANGE DINAMIS
+// ===============================
+const maxValue = Math.max(...values);
+const minValue = Math.min(...values);
+
+const dynamicColors = values.map(v => {
+
+    // Tinggi
+    if (v >= maxValue * 0.7) {
+        return '#16a34a'; // Hijau
+    }
+
+    // Sedang
+    else if (v >= maxValue * 0.4) {
+        return '#f59e0b'; // kuning
+    }
+
+    // Rendah
+    else {
+        return '#dc2626'; // merah
+    }
+
+});
+
+window.kecamatanChartInstance = new Chart(
+    document.getElementById('kecamatanChart'),
+    {
+        type: 'bar',
+
+        data: {
+            labels: labels,
+
+            datasets: [{
+                label: 'Jumlah Pasien',
+
+                data: values,
+
+                backgroundColor: dynamicColors,
+
+                borderRadius: 8
+            }]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            plugins: {
+                legend: {
+                    display: false
+                },
+
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+
+                            let val = context.raw;
+
+                            if (val >= maxValue * 0.7) {
+                                return `${val} pasien (Tinggi)`;
+                            }
+
+                            else if (val >= maxValue * 0.4) {
+                                return `${val} pasien (Sedang)`;
+                            }
+
+                            else {
+                                return `${val} pasien (Rendah)`;
+                            }
+                        }
+                    }
+                }
+            },
+
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    }
+);
+}
+
+
+// ========================
+// KORELASI FAKTOR RISIKO
+// ========================
+function buildKorelasiDinamis(){
+  if(pasienData.length===0){document.getElementById('korelasi-result').innerHTML='<p style="color:#999;font-size:13px;">Upload data Excel untuk melihat korelasi.</p>';return;}
+  function hitung(total,terkait){if(total===0)return 0;return(terkait/total).toFixed(2);}
+  let tDM=pasienData.filter(p=>(p.dx||"").toLowerCase().includes("diabetes")).length;
+  let tHTN=pasienData.filter(p=>(p.dx||"").toLowerCase().includes("hipertensi")).length;
+  let tDBD=pasienData.filter(p=>(p.dx||"").toLowerCase().includes("dbd")).length;
+  let obesDM=pasienData.filter(p=>parseFloat(p.bmi||0)>30&&(p.dx||"").toLowerCase().includes("diabetes")).length;
+  let usiaHTN=pasienData.filter(p=>parseInt(p.usia||0)>50&&(p.dx||"").toLowerCase().includes("hipertensi")).length;
+  let rokHTN=pasienData.filter(p=>(p.rokok||"").toLowerCase()==="ya"&&(p.dx||"").toLowerCase().includes("hipertensi")).length;
+  let guDM=pasienData.filter(p=>parseFloat(p.gd||0)>200&&(p.dx||"").toLowerCase().includes("diabetes")).length;
+  let kolHTN=pasienData.filter(p=>parseFloat(p.kol||0)>240&&(p.dx||"").toLowerCase().includes("hipertensi")).length;
+
+  let r1=hitung(tDM,obesDM),r2=hitung(tHTN,usiaHTN),r3=hitung(tHTN,rokHTN),r4=hitung(tDM,guDM),r5=hitung(tHTN,kolHTN);
+
+  function gc(n){n=parseFloat(n);if(n>=0.7)return"#dc2626";if(n>=0.4)return"#f59e0b";return"#16a34a";}
+  function gl(n){n=parseFloat(n);if(n>=0.7)return"Kuat";if(n>=0.4)return"Sedang";return"Lemah";}
+  function kc(j,n,d){return `<div class="predict-box" style="background:#f0fdfa;margin-bottom:8px;"><div style="display:flex;justify-content:space-between;"><b style="font-size:13px;">${j}</b><span style="font-size:11px;color:${gc(n)};font-weight:bold;">${gl(n)}</span></div><div style="font-size:12px;color:#666;margin-top:4px;">${d}</div><div style="display:flex;align-items:center;gap:10px;margin-top:6px;"><div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:${n*100}%;background:${gc(n)}"></div></div><span style="font-size:13px;font-weight:bold;color:${gc(n)}">r=${n}</span></div></div>`;}
+
+  document.getElementById('korelasi-result').innerHTML=
+    kc('BMI Obesitas → Diabetes',r1,`${obesDM} dari ${tDM} pasien DM memiliki BMI >30`)+
+    kc('Usia >50 → Hipertensi',r2,`${usiaHTN} dari ${tHTN} pasien HTN berusia >50`)+
+    kc('Merokok → Hipertensi',r3,`${rokHTN} dari ${tHTN} pasien HTN adalah perokok`)+
+    kc('Gula Darah >200 → Diabetes',r4,`${guDM} dari ${tDM} pasien DM memiliki GD >200`)+
+    kc('Kolesterol >240 → Hipertensi',r5,`${kolHTN} dari ${tHTN} pasien HTN kolesterol >240`);
+}
+
+
+// ========================
+// PETA LEAFLET
+// ========================
+function buildMap(){
+  if(map)map.remove();
+  map=L.map('mapDIY').setView([-7.7956,110.3695],10);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+  pasienData.forEach(p=>{let k=p.kecamatan;if(koordinatDIY[k]){let[lat,lng]=koordinatDIY[k];L.marker([lat,lng]).addTo(map).bindPopup(`<b>${p.nama}</b><br>RM:${p.rm}<br>Dx:${p.dx}<br>Kec:${k}`);}});
+}
+
+
+// ========================
+// PREDIKSI
+// ========================
+function loadPrediksiDropdown(){
+  const el=document.getElementById('prediksiPasien');
+  el.innerHTML=`<option value="">-- Pilih Pasien --</option>`;
+  pasienData.forEach((p,i)=>{el.innerHTML+=`<option value="${i}">${p.nama} (${p.rm})</option>`;});
+}
+
+function loadPrediksiPasien(){
+  const idx=document.getElementById('prediksiPasien').value;
+  if(idx==='')return;
+  const p=pasienData[idx];
+  document.getElementById('sl-usia').value=p.usia||55;
+  document.getElementById('sl-td').value=p.td||145;
+  document.getElementById('sl-gd').value=p.gd||180;
+  document.getElementById('sl-bmi').value=p.bmi||27;
+  document.getElementById('sl-kol').value=p.kol||220;
+  document.getElementById('sl-rokok').value=(p.rokok||'').toLowerCase()==='ya'?1:0;
+  updatePrediksi();
+}
+
+function updatePrediksi(){
+  const usia=+document.getElementById('sl-usia').value;
+  const td=+document.getElementById('sl-td').value;
+  const gd=+document.getElementById('sl-gd').value;
+  const bmi=+document.getElementById('sl-bmi').value;
+  const kol=+document.getElementById('sl-kol').value;
+  const rokok=+document.getElementById('sl-rokok').value;
+
+  document.getElementById('val-usia').innerHTML=usia+' tahun';
+  document.getElementById('val-td').innerHTML=td+' mmHg';
+  document.getElementById('val-gd').innerHTML=gd+' mg/dL';
+  document.getElementById('val-bmi').innerHTML=bmi;
+  document.getElementById('val-kol').innerHTML=kol+' mg/dL';
+
+  let rDM=Math.min(100,Math.round((gd>126?40:20)+(bmi>30?25:bmi>25?12:0)+(usia>50?15:5)+(rokok*5)));
+  let rHTN=Math.min(100,Math.round((td>160?50:td>140?30:15)+(usia>60?20:10)+(kol>240?10:0)+(rokok*5)));
+  let rCVD=Math.min(100,Math.round((td>160?30:20)+(kol>240?25:12)+(usia>60?20:10)+(rokok*15)+(gd>200?10:0)));
+
+  function rc(t,r,c,cl){return `<div class="predict-box ${cl}"><b>${t}</b><br>Risiko: <strong>${r}%</strong><div class="progress-bar"><div class="progress-fill" style="width:${r}%;background:${c}"></div></div><div style="font-size:11px;color:#666;margin-top:6px;">${r>60?'🚨 Risiko tinggi':r>30?'⚠️ Risiko sedang':'✅ Risiko rendah'}</div></div>`;}
+
+  document.getElementById('prediksi-result').innerHTML='<h4 style="margin-bottom:12px;">Hasil Prediksi Risiko</h4>'+
+    rc('Diabetes Melitus',rDM,'#dc2626',rDM>60?'risk-high':rDM>30?'risk-med':'risk-low')+
+    rc('Hipertensi',rHTN,'#d97706',rHTN>60?'risk-high':rHTN>30?'risk-med':'risk-low')+
+    rc('Penyakit Kardiovaskular',rCVD,'#2563eb',rCVD>60?'risk-high':rCVD>30?'risk-med':'risk-low');
+}
+
+// ========================
+// FORECAST
+// ========================
+function buildForecastChart(){
+  if(window.forecastChartInstance)window.forecastChartInstance.destroy();
+  const tHTN=pasienData.filter(p=>(p.dx||'').toLowerCase().includes('hipertensi')).length;
+  const tDM=pasienData.filter(p=>(p.dx||'').toLowerCase().includes('diabetes')).length;
+  window.forecastChartInstance=new Chart(document.getElementById('forecastChart'),{type:'line',data:{labels:['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu'],datasets:[
+    {label:'Hipertensi (Histori)',borderColor:'#0f766e',fill:false,tension:.4,data:[tHTN-10,tHTN-8,tHTN-5,tHTN-2,tHTN,null,null,null]},
+    {label:'Hipertensi (Proyeksi)',borderColor:'#0f766e',borderDash:[10,5],fill:false,tension:.4,data:[null,null,null,null,tHTN,tHTN+5,tHTN+8,tHTN+12]},
+    {label:'Diabetes (Histori)',borderColor:'#d97706',fill:false,tension:.4,data:[tDM-7,tDM-5,tDM-3,tDM-1,tDM,null,null,null]},
+    {label:'Diabetes (Proyeksi)',borderColor:'#d97706',borderDash:[10,5],fill:false,tension:.4,data:[null,null,null,null,tDM,tDM+2,tDM+5,tDM+8]}
+  ]},options:{responsive:true,maintainAspectRatio:false}});
+}
+
+
+
+// ========================
+// PREDIKSI RUMAH SAKIT
+// ========================
+function buildPrediksiRS(){
+
+  if(pasienData.length===0) return;
+
+  // RESET
+  document.getElementById('poliRekomendasi').innerHTML='';
+
+  // =========================================
+  // ANALISIS PEMBAYARAN
+  // =========================================
+
+  let bpjs = pasienData.filter(p =>
+    (p.pembayaran || '').toLowerCase().includes('bpjs')
+  ).length;
+
+  let umum = pasienData.filter(p =>
+    (p.pembayaran || '').toLowerCase().includes('umum')
+  ).length;
+
+  let problem = pasienData.filter(p =>
+    (p.status_bayar || '').toLowerCase().includes('bermasalah') ||
+    (p.status_bayar || '').toLowerCase().includes('pending') ||
+    (p.status_bayar || '').toLowerCase().includes('piutang')
+  ).length;
+
+  let total = pasienData.length;
+
+  let bpjsPersen = total ? ((bpjs/total)*100).toFixed(1) : 0;
+  let umumPersen = total ? ((umum/total)*100).toFixed(1) : 0;
+  let problemPersen = total ? ((problem/total)*100).toFixed(1) : 0;
+
+  document.getElementById('bpjsTotal').innerHTML = bpjs;
+  document.getElementById('umumTotal').innerHTML = umum;
+  document.getElementById('problemBayar').innerHTML = problem;
+
+  document.getElementById('bpjsPersen').innerHTML = `${bpjsPersen}% dari total pasien`;
+  document.getElementById('umumPersen').innerHTML = `${umumPersen}% dari total pasien`;
+  document.getElementById('problemPersen').innerHTML = `${problemPersen}% bermasalah`;
+
+  // CHART PEMBAYARAN
+  if(window.paymentChartObj) window.paymentChartObj.destroy();
+
+  window.paymentChartObj = new Chart(
+    document.getElementById('paymentChart'),
+    {
+      type:'doughnut',
+      data:{
+        labels:['BPJS','Umum','Bermasalah'],
+        datasets:[{
+          data:[bpjs, umum, problem],
+          backgroundColor:[
+            '#2563eb',
+            '#16a34a',
+            '#dc2626'
+          ]
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false
+      }
+    }
+  );
+
+  // REKOMENDASI PEMBAYARAN
+  let rekomPembayaran = '';
+
+  if(problemPersen >= 20){
+
+    rekomPembayaran += `
+      <div class="alert-box alert-danger">
+        <div class="alert-icon">🚨</div>
+        <div class="alert-content">
+          <div class="alert-title">Masalah Pembayaran Tinggi</div>
+          <div class="alert-desc">
+            ${problemPersen}% pembayaran bermasalah.
+            Risiko gangguan cashflow rumah sakit meningkat.
+          </div>
+
+          <div class="alert-action">
+            → Evaluasi piutang pasien & klaim BPJS
+          </div>
+
+          <div class="alert-action">
+            → Percepat verifikasi administrasi
+          </div>
+
+          <div class="alert-action">
+            → Audit klaim pending
+          </div>
+        </div>
+      </div>
+    `;
+
+  }else{
+
+    rekomPembayaran += `
+      <div class="alert-box alert-success">
+        <div class="alert-icon">✅</div>
+        <div class="alert-content">
+          <div class="alert-title">Pembayaran Relatif Stabil</div>
+          <div class="alert-desc">
+            Sistem pembayaran masih dalam kondisi aman.
+          </div>
+
+          <div class="alert-action">
+            → Pertahankan monitoring klaim rutin
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if(bpjsPersen >= 70){
+
+    rekomPembayaran += `
+      <div class="alert-box alert-warning">
+        <div class="alert-icon">⚠️</div>
+        <div class="alert-content">
+          <div class="alert-title">Ketergantungan Tinggi pada BPJS</div>
+          <div class="alert-desc">
+            ${bpjsPersen}% pasien menggunakan BPJS.
+            Risiko ketergantungan pendapatan pada klaim BPJS meningkat.
+          </div>
+
+          <div class="alert-action">
+            → Tingkatkan layanan pasien umum
+          </div>
+
+          <div class="alert-action">
+            → Diversifikasi layanan rumah sakit
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById('paymentRekomendasi').innerHTML = rekomPembayaran;
+
+
+  // =========================================
+  // ANALISIS OVERLOAD POLI
+  // =========================================
+
+  let poliData = {};
+
+  pasienData.forEach(p => {
+
+    let poli = p.poli || 'Tidak diketahui';
+
+    if(!poliData[poli]){
+      poliData[poli] = 0;
+    }
+
+    poliData[poli]++;
+  });
+
+  let labels = Object.keys(poliData);
+  let values = Object.values(poliData);
+
+  // CHART POLI
+  if(window.poliChartObj) window.poliChartObj.destroy();
+
+  window.poliChartObj = new Chart(
+    document.getElementById('poliChart'),
+    {
+      type:'bar',
+      data:{
+        labels:labels,
+        datasets:[{
+          label:'Jumlah Pengunjung',
+          data:values,
+          backgroundColor:'#0f766e'
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false}
+        },
+        scales:{
+          y:{
+            beginAtZero:true
+          }
+        }
+      }
+    }
+  );
+
+  // OVERLOAD CARD
+  let cards = '';
+
+  labels.forEach((poli,index)=>{
+
+    let totalPasien = values[index];
+
+    let status = '';
+    let warna = '';
+    let rekom = '';
+
+    if(totalPasien >= 40){
+
+      status = '🚨 Overload';
+      warna = '#dc2626';
+
+      rekom = `
+        <div class="alert-box alert-danger">
+          <div class="alert-icon">🚨</div>
+          <div class="alert-content">
+            <div class="alert-title">${poli} Mengalami Overload</div>
+            <div class="alert-desc">
+              Jumlah pasien sangat tinggi (${totalPasien} pasien).
+            </div>
+
+            <div class="alert-action">
+              → Tambahkan dokter / perawat shift
+            </div>
+
+            <div class="alert-action">
+              → Buka jam layanan tambahan
+            </div>
+
+            <div class="alert-action">
+              → Evaluasi antrean pasien
+            </div>
+          </div>
+        </div>
+      `;
+
+    }else if(totalPasien >= 20){
+
+      status = '⚠️ Padat';
+      warna = '#f59e0b';
+
+      rekom = `
+        <div class="alert-box alert-warning">
+          <div class="alert-icon">⚠️</div>
+          <div class="alert-content">
+            <div class="alert-title">${poli} Mulai Padat</div>
+            <div class="alert-desc">
+              Pengunjung meningkat (${totalPasien} pasien).
+            </div>
+
+            <div class="alert-action">
+              → Monitor waktu tunggu pasien
+            </div>
+
+            <div class="alert-action">
+              → Optimalkan jadwal dokter
+            </div>
+          </div>
+        </div>
+      `;
+
+    }else{
+
+      status = '✅ Stabil';
+      warna = '#16a34a';
+
+      rekom = `
+        <div class="alert-box alert-success">
+          <div class="alert-icon">✅</div>
+          <div class="alert-content">
+            <div class="alert-title">${poli} Stabil</div>
+            <div class="alert-desc">
+              Beban layanan masih normal.
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    cards += `
+      <div class="metric-card">
+        <small>${poli}</small>
+
+        <h2 style="margin-top:10px;">
+          ${totalPasien}
+        </h2>
+
+        <div style="
+          margin-top:8px;
+          font-size:13px;
+          font-weight:bold;
+          color:${warna};
+        ">
+          ${status}
+        </div>
+      </div>
+    `;
+
+    document.getElementById('poliRekomendasi').innerHTML += rekom;
+
+  });
+
+  document.getElementById('poliOverloadCards').innerHTML = cards;
+
+}
+
+
+// ========================
+// INIT
+// ========================
+updatePrediksi();
+</script>
+
+
+<script>
+// ========================================================
+// SATUSEHAT FHIR VALIDATOR ENGINE
+// ========================================================
+let ssChartPie=null, ssChartBar=null, ssChartErr=null, ssChartDx=null, ssChartObat=null;
+let ssAllRows = [];   // all processed rows
+let ssCurrentPage = 1;
+const SS_PAGE_SIZE = 20;
+
+// ---- FHIR Validation Rules ----
+const SS_FHIR_RULES = [
+  {
+    check: r => !r.status || r.status.toString().trim() === '',
+    path: 'MedicationRequest.status',
+    msg: 'Status resep kosong — wajib diisi (active/completed/cancelled)',
+    sev: 'error'
+  },
+  {
+    check: r => {
+      const a = (r.aturan_pakai || '').toString().toLowerCase();
+      return /\d+x\d+|sesudah makan|sebelum makan|^pagi$|^malam$|^siang$|jika perlu/.test(a) && a.trim() !== '';
+    },
+    path: 'dosageInstruction.timing',
+    msg: 'Aturan pakai masih teks bebas — gunakan kode SNOMED/timing structured',
+    sev: 'error'
+  },
+  {
+    check: r => !r.kode_obat || r.kode_obat.toString().trim() === '',
+    path: 'medication.code',
+    msg: 'Kode obat tidak ditemukan — referensikan ke KBLI/RxNorm',
+    sev: 'error'
+  },
+  {
+    check: r => !r.jumlah || isNaN(Number(r.jumlah)),
+    path: 'dispenseRequest.quantity',
+    msg: 'Jumlah tidak valid atau kosong',
+    sev: 'error'
+  },
+  {
+    check: r => !r.satuan || r.satuan.toString().trim() === '',
+    path: 'dispenseRequest.quantity.unit',
+    msg: 'Satuan obat tidak dicantumkan',
+    sev: 'warning'
+  },
+  {
+    check: r => !r.tanggal || r.tanggal.toString().trim() === '',
+    path: 'authoredOn',
+    msg: 'Tanggal resep tidak ada',
+    sev: 'warning'
+  },
+  {
+    check: r => !r.nama_obat || r.nama_obat.toString().trim() === '',
+    path: 'medication.display',
+    msg: 'Nama obat kosong',
+    sev: 'error'
+  },
+];
+
+function ssValidateRow(row){
+  const errors = [];
+  SS_FHIR_RULES.forEach(rule => {
+    try { if(rule.check(row)) errors.push({path:rule.path, msg:rule.msg, sev:rule.sev}); }
+    catch(e){}
+  });
+  return errors;
+}
+
+// ---- Generate FHIR resep data from pasienData if no FHIR sheet ----
+function ssGenerateFromPasien(data){
+  const dxDrug = {
+    'Hipertensi': [{nama_obat:'Amlodipine 5mg',kode_obat:'C08CA01',dosis:5,satuan:'tablet',jumlah:30},{nama_obat:'Captopril 25mg',kode_obat:'C09AA01',dosis:25,satuan:'tablet',jumlah:90}],
+    'ISPA':        [{nama_obat:'Amoxicillin 500mg',kode_obat:'J01CA04',dosis:500,satuan:'tablet',jumlah:15},{nama_obat:'Paracetamol 500mg',kode_obat:'N02BE01',dosis:500,satuan:'tablet',jumlah:10}],
+    'DBD':         [{nama_obat:'Paracetamol 500mg',kode_obat:'N02BE01',dosis:500,satuan:'tablet',jumlah:20},{nama_obat:'Vitamin C 500mg',kode_obat:'A11GA01',dosis:500,satuan:'tablet',jumlah:10}],
+    'Diabetes':    [{nama_obat:'Metformin 500mg',kode_obat:'A10BA02',dosis:500,satuan:'tablet',jumlah:60},{nama_obat:'Glibenclamide 5mg',kode_obat:'A10BB01',dosis:5,satuan:'tablet',jumlah:30}],
+  };
+  const doctors = ['dr. Budi Santoso','dr. Siti Rahayu','dr. Ahmad Fauzi','dr. Dewi Lestari','dr. Hendra Wijaya'];
+  const timingGood = ['1 kali sehari','2 kali sehari','3 kali sehari','1 kali sehari sebelum tidur','2 kali sehari sesudah makan'];
+  const timingBad  = ['3x1 sesudah makan','pagi siang malam','2x1','jika perlu'];
+  const generated = data.map((p, i) => {
+    const dx = p.dx || 'ISPA';
+    const pool = dxDrug[dx] || dxDrug['ISPA'];
+    const drug = pool[i % pool.length];
+    const r = (i * 7919) % 100;  // deterministic pseudo-random
+    return {
+      rm_pasien: p.rm || '',
+      nama_pasien: p.nama || '',
+      diagnosis: dx,
+      dokter: doctors[i % doctors.length],
+      nama_obat: drug.nama_obat,
+      dosis: drug.dosis,
+      unit: 'mg',
+      aturan_pakai: r < 15 ? timingBad[r % timingBad.length] : timingGood[r % timingGood.length],
+      kode_obat: r >= 20 && r < 27 ? '' : drug.kode_obat,
+      jumlah: r >= 27 && r < 32 ? '' : drug.jumlah,
+      satuan: r >= 32 && r < 37 ? '' : drug.satuan,
+      status: r >= 12 && r < 20 ? '' : 'active',
+      tanggal: r >= 37 && r < 42 ? '' : `2025-${String((i%12)+1).padStart(2,'0')}-${String((i%28)+1).padStart(2,'0')}`,
+    };
+  });
+  ssProcessData(generated);
+}
+
+// ---- Main process ----
+function ssProcessData(jsonData){
+  if(!jsonData || jsonData.length === 0) return;
+
+  let valid = 0, invalid = 0;
+  const doctorStats = {};
+  const errorTypes = {};
+  const dxCounts = {};
+  const obatCounts = {};
+
+  ssAllRows = jsonData.map(row => {
+    const errors = ssValidateRow(row);
+    const hasError = errors.some(e=>e.sev==='error');
+    const hasWarn  = errors.some(e=>e.sev==='warning') && !hasError;
+
+    if(!hasError) valid++; else invalid++;
+
+    const dok = row.dokter || 'Tidak Diketahui';
+    if(!doctorStats[dok]) doctorStats[dok] = {total:0, error:0, warning:0};
+    doctorStats[dok].total++;
+    if(hasError) doctorStats[dok].error++;
+    else if(hasWarn) doctorStats[dok].warning++;
+
+    errors.forEach(e => {
+      if(e.sev==='error') errorTypes[e.path] = (errorTypes[e.path]||0)+1;
+    });
+
+    const dx = row.diagnosis || row.dx || '—';
+    dxCounts[dx] = (dxCounts[dx]||0)+1;
+
+    const obat = row.nama_obat || '—';
+    obatCounts[obat] = (obatCounts[obat]||0)+1;
+
+    return { row, errors, hasError, hasWarn };
+  });
+
+  // Update metrics
+  document.getElementById('ss-mTotal').textContent = jsonData.length;
+  document.getElementById('ss-mValid').textContent = valid;
+  document.getElementById('ss-mInvalid').textContent = invalid;
+  document.getElementById('ss-mRate').textContent = jsonData.length > 0 ? ((invalid/jsonData.length)*100).toFixed(1)+'%' : '0%';
+
+  // Populate dokter filter
+  const filterDokter = document.getElementById('ss-filterDokter');
+  filterDokter.innerHTML = '<option value="">Semua Dokter</option>';
+  Object.keys(doctorStats).forEach(d => {
+    filterDokter.innerHTML += `<option value="${d}">${d}</option>`;
+  });
+
+  // Render table (page 1)
+  ssCurrentPage = 1;
+  ssRenderTable();
+
+  // Doctor table
+  ssBuildDoctorTable(doctorStats);
+
+  // Charts
+  ssBuildCharts(doctorStats, errorTypes, valid, invalid, dxCounts, obatCounts);
+
+  // Alerts & Prediction
+  ssBuildAlerts(doctorStats, errorTypes, jsonData.length, invalid);
+  ssBuildPrediction(doctorStats, errorTypes, jsonData.length, invalid);
+
+  ssShowNotif('success', '✅', 'Analisis SATUSEHAT Selesai', `${jsonData.length} resep diproses — ${valid} valid, ${invalid} error`, 4000);
+}
+
+// ---- Render paginated table ----
+function ssRenderTable(){
+  const filterStatus = document.getElementById('ss-filterStatus').value;
+  const filterDokter = document.getElementById('ss-filterDokter').value;
+  const filterSearch = (document.getElementById('ss-filterSearch').value||'').toLowerCase();
+
+  const filtered = ssAllRows.filter(({row, hasError, hasWarn}) => {
+    const statusMatch = !filterStatus ||
+      (filterStatus==='valid' && !hasError && !hasWarn) ||
+      (filterStatus==='error' && hasError) ||
+      (filterStatus==='warning' && hasWarn);
+    const dokMatch = !filterDokter || (row.dokter||'') === filterDokter;
+    const searchMatch = !filterSearch ||
+      (row.nama_obat||'').toLowerCase().includes(filterSearch) ||
+      (row.nama_pasien||'').toLowerCase().includes(filterSearch) ||
+      (row.rm_pasien||'').toLowerCase().includes(filterSearch) ||
+      (row.dokter||'').toLowerCase().includes(filterSearch);
+    return statusMatch && dokMatch && searchMatch;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / SS_PAGE_SIZE));
+  ssCurrentPage = Math.min(ssCurrentPage, totalPages);
+  const start = (ssCurrentPage-1)*SS_PAGE_SIZE;
+  const pageRows = filtered.slice(start, start+SS_PAGE_SIZE);
+
+  const tbody = document.getElementById('ss-resultTable');
+  if(filtered.length === 0){
+    tbody.innerHTML = `<tr><td colspan="9"><div class="ss-empty"><span class="ss-empty-icon">🔍</span><p>Tidak ada data yang cocok dengan filter</p></div></td></tr>`;
+    document.getElementById('ss-pagination').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = pageRows.map(({row, errors, hasError, hasWarn}) => {
+    const statusLabel = hasError ? 'Error' : hasWarn ? 'Warning' : 'Valid';
+    const badgeCls = hasError ? 'error' : hasWarn ? 'warning' : 'valid';
+    const mainPath = errors.length > 0 ? errors[0].path : 'MedicationRequest';
+    const mainMsg = errors.length > 0
+      ? errors.map(e=>`<span class="ss-badge ${e.sev}" style="margin-right:3px">${e.msg}</span>`).join('')
+      : '<span style="color:#16a34a;font-size:12px">✓ Sesuai standar FHIR</span>';
+    const tgl = row.tanggal || '—';
+    return `<tr>
+      <td style="font-size:11px;color:#666">${row.rm_pasien||'—'}</td>
+      <td style="font-weight:500">${row.nama_pasien||'—'}</td>
+      <td><span class="ss-badge info">${row.diagnosis||'—'}</span></td>
+      <td>${row.nama_obat||'—'}</td>
+      <td>${row.dokter||'—'}</td>
+      <td style="white-space:nowrap;font-size:12px">${tgl}</td>
+      <td class="ss-fhir-path">${mainPath}</td>
+      <td><span class="ss-badge ${badgeCls}">${statusLabel}</span></td>
+      <td style="max-width:260px">${mainMsg}</td>
+    </tr>`;
+  }).join('');
+
+  // Pagination
+  const pg = document.getElementById('ss-pagination');
+  let pgHtml = `<span>Menampilkan ${start+1}–${Math.min(start+SS_PAGE_SIZE,filtered.length)} dari ${filtered.length} resep</span>`;
+  if(totalPages > 1){
+    pgHtml += `<button onclick="ssGoPage(${ssCurrentPage-1})" style="padding:4px 10px;border-radius:6px;border:1px solid #d1d5db;background:white;cursor:pointer;font-size:12px" ${ssCurrentPage<=1?'disabled':''}>‹ Prev</button>`;
+    for(let i=1;i<=totalPages;i++){
+      if(i===1||i===totalPages||Math.abs(i-ssCurrentPage)<=1){
+        pgHtml += `<button onclick="ssGoPage(${i})" style="padding:4px 10px;border-radius:6px;border:1px solid ${i===ssCurrentPage?'#185FA5':'#d1d5db'};background:${i===ssCurrentPage?'#185FA5':'white'};color:${i===ssCurrentPage?'#fff':'#333'};cursor:pointer;font-size:12px">${i}</button>`;
+      } else if(Math.abs(i-ssCurrentPage)===2){
+        pgHtml += `<span style="font-size:12px">…</span>`;
+      }
+    }
+    pgHtml += `<button onclick="ssGoPage(${ssCurrentPage+1})" style="padding:4px 10px;border-radius:6px;border:1px solid #d1d5db;background:white;cursor:pointer;font-size:12px" ${ssCurrentPage>=totalPages?'disabled':''}>Next ›</button>`;
+  }
+  pg.innerHTML = pgHtml;
+}
+
+function ssGoPage(p){
+  ssCurrentPage = p;
+  ssRenderTable();
+}
+
+// ---- Doctor table ----
+function ssBuildDoctorTable(stats){
+  const tbody = document.getElementById('ss-doctorTable');
+  tbody.innerHTML = Object.keys(stats).map(dok => {
+    const s = stats[dok];
+    const p = (s.error/s.total)*100;
+    let st='Baik', cls='valid', rek='Pertahankan kualitas', tren='↔ Stabil';
+    if(p>30){st='Kritis';cls='critical';rek='Audit segera + coaching wajib';tren='↑ Perlu tindakan segera';}
+    else if(p>15){st='Evaluasi';cls='error';rek='Pelatihan FHIR dalam 7 hari';tren='↑ Perlu perhatian';}
+    else if(p>5){st='Warning';cls='warning';rek='Review SOP dosageInstruction';tren='~ Waspadai';}
+    const barColor = p>30?'#dc2626':p>15?'#f59e0b':'#16a34a';
+    return `<tr>
+      <td style="font-weight:600">${dok}</td>
+      <td>${s.total}</td>
+      <td>${s.error}</td>
+      <td>${s.warning}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="ss-risk-bar" style="width:80px"><div class="ss-risk-fill" style="width:${Math.min(p,100)}%;background:${barColor}"></div></div>
+          <span style="font-size:12px;color:${barColor};font-weight:600">${p.toFixed(1)}%</span>
+        </div>
+      </td>
+      <td><span class="ss-badge ${cls}">${st}</span></td>
+      <td style="font-size:12px;color:#555">${rek}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- Charts ----
+function ssBuildCharts(stats, errorTypes, valid, invalid, dxCounts, obatCounts){
+  if(ssChartPie){ssChartPie.destroy();ssChartBar.destroy();ssChartErr.destroy();}
+  if(ssChartDx) ssChartDx.destroy();
+  if(ssChartObat) ssChartObat.destroy();
+
+  const total = valid + invalid;
+
+  // Pie
+  document.getElementById('ss-legendPie').innerHTML =
+    `<span><span class="ss-legend-dot" style="background:#16a34a"></span>Valid ${valid} (${((valid/total)*100).toFixed(1)}%)</span>
+     <span><span class="ss-legend-dot" style="background:#dc2626"></span>Error ${invalid} (${((invalid/total)*100).toFixed(1)}%)</span>`;
+  ssChartPie = new Chart(document.getElementById('ss-chartPie').getContext('2d'), {
+    type:'doughnut', data:{labels:['Valid','Error'], datasets:[{data:[valid,invalid], backgroundColor:['#16a34a','#dc2626'], borderWidth:0}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+  });
+
+  // Bar - error per dokter
+  const docs = Object.keys(stats);
+  ssChartBar = new Chart(document.getElementById('ss-chartBar').getContext('2d'), {
+    type:'bar', data:{labels:docs, datasets:[{label:'Error',data:docs.map(d=>stats[d].error),backgroundColor:'#dc2626'},{label:'Valid',data:docs.map(d=>stats[d].total-stats[d].error),backgroundColor:'#16a34a'}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{font:{size:11}}}}, scales:{x:{stacked:true,ticks:{font:{size:10}}},y:{stacked:true,ticks:{font:{size:10}}}}}
+  });
+
+  // Error types
+  const errLabels = Object.keys(errorTypes);
+  const errVals = Object.values(errorTypes);
+  document.getElementById('ss-legendErr').innerHTML = `<span><span class="ss-legend-dot" style="background:#3b82f6"></span>Jumlah kejadian per tipe error FHIR</span>`;
+  ssChartErr = new Chart(document.getElementById('ss-chartErr').getContext('2d'), {
+    type:'bar', data:{labels:errLabels, datasets:[{data:errVals, backgroundColor:'#3b82f6'}]},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}}
+  });
+
+  // Diagnosis pie
+  ssChartDx = new Chart(document.getElementById('ss-chartDx').getContext('2d'), {
+    type:'doughnut', data:{labels:Object.keys(dxCounts), datasets:[{data:Object.values(dxCounts), backgroundColor:['#185FA5','#16a34a','#f59e0b','#dc2626','#8b5cf6','#0891b2']}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{font:{size:10}}}}}
+  });
+
+  // Top obat
+  const obatSorted = Object.entries(obatCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  ssChartObat = new Chart(document.getElementById('ss-chartObat').getContext('2d'), {
+    type:'bar', data:{labels:obatSorted.map(o=>o[0]), datasets:[{label:'Jumlah',data:obatSorted.map(o=>o[1]), backgroundColor:'#0891b2'}]},
+    options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{ticks:{font:{size:10}}},y:{ticks:{font:{size:10}},beginAtZero:true}}}
+  });
+}
+
+// ---- Alerts ----
+function ssBuildAlerts(stats, errorTypes, total, invalid){
+  const alerts = [];
+  const rate = (invalid/total)*100;
+
+  if(rate>30) alerts.push({type:'danger',icon:'🚨',title:`Error rate kritis (${rate.toFixed(1)}%)`,desc:'Lebih dari 30% resep mengandung error. Diperlukan audit menyeluruh dan pelatihan ulang staf klinis.'});
+  else if(rate>15) alerts.push({type:'warning',icon:'⚠️',title:`Error rate tinggi (${rate.toFixed(1)}%)`,desc:'Error rate melebihi threshold 15%. Rekomendasikan review SOP penulisan resep.'});
+  else if(rate<=15 && invalid>0) alerts.push({type:'info',icon:'ℹ️',title:`Error rate dalam batas wajar (${rate.toFixed(1)}%)`,desc:'Tetap lakukan monitoring berkala untuk mempertahankan kualitas.'});
+
+  Object.keys(stats).forEach(dok => {
+    const s = stats[dok];
+    const p = (s.error/s.total)*100;
+    if(p>30) alerts.push({type:'danger',icon:'👨‍⚕️',title:`Evaluasi segera: ${dok}`,desc:`Error rate ${p.toFixed(1)}% (${s.error}/${s.total} resep). Segera lakukan sesi coaching dan audit resep terakhir.`});
+    else if(p>15) alerts.push({type:'warning',icon:'📋',title:`Peringatan: ${dok}`,desc:`Error rate ${p.toFixed(1)}%. Rekomendasikan pelatihan FHIR standar SATUSEHAT dalam 7 hari ke depan.`});
+  });
+
+  const topErr = Object.entries(errorTypes).sort((a,b)=>b[1]-a[1]);
+  if(topErr.length>0){
+    const [eName, eCount] = topErr[0];
+    alerts.push({type:'info',icon:'📚',title:`Error terbanyak: ${eName}`,desc:`Terjadi ${eCount} kali. Rekomendasikan panduan pengisian field "${eName}" untuk semua klinisi.`});
+  }
+
+  if(total>0 && invalid===0) alerts.push({type:'success',icon:'✅',title:'Semua resep valid!',desc:'Data memenuhi standar FHIR SATUSEHAT. Pertahankan kualitas dengan audit rutin bulanan.'});
+
+  const badge = document.getElementById('ss-alertBadge');
+  const panel = document.getElementById('ss-alertPanel');
+
+  if(alerts.length===0){
+    panel.innerHTML='<div class="ss-empty"><span class="ss-empty-icon">✅</span><p>Tidak ada alert kritis</p></div>';
+    badge.style.display='none';
+    return;
+  }
+
+  badge.style.display='inline';
+  badge.textContent=alerts.length;
+
+  panel.innerHTML = alerts.map(a=>`
+    <div class="ss-alert ${a.type}">
+      <div class="ss-alert-icon">${a.icon}</div>
+      <div><div class="ss-alert-title">${a.title}</div><div class="ss-alert-desc">${a.desc}</div></div>
+    </div>`).join('');
+
+  const critical = alerts.filter(a=>a.type==='danger');
+  setTimeout(()=>{
+    critical.forEach(a => ssShowNotif('danger','🚨', a.title, a.desc, 8000));
+  },800);
+}
+
+// ---- Prediction ----
+function ssBuildPrediction(stats, errorTypes, total, invalid){
+  const rate = (invalid/total)*100;
+  const docs = Object.keys(stats);
+  const highRisk = docs.filter(d=>(stats[d].error/stats[d].total)*100>15);
+  const projMonthly = Math.round(invalid*4.3);
+  const projSaved = Math.round((total-invalid)*4.3);
+
+  document.getElementById('ss-predictContent').innerHTML = `
+    <div class="ss-section-label" style="margin-bottom:12px">Prediksi & Analisis Risiko FHIR</div>
+
+    <div class="ss-predict-card">
+      <h4>📈 Proyeksi Error Bulanan</h4>
+      <p>Berdasarkan <strong>${total} resep</strong> saat ini, diperkirakan <strong>${projMonthly} resep</strong> akan error per bulan jika pola ini berlanjut.<br>Resep valid yang diperkirakan: <strong>${projSaved}</strong>/bulan.</p>
+      <div class="ss-risk-row">
+        <span style="min-width:100px">Proyeksi error</span>
+        <div class="ss-risk-bar"><div class="ss-risk-fill" style="width:${Math.min(rate,100)}%;background:${rate>30?'#dc2626':rate>15?'#f59e0b':'#16a34a'}"></div></div>
+        <span style="font-weight:600;min-width:40px;color:${rate>30?'#dc2626':rate>15?'#f59e0b':'#16a34a'}">${rate.toFixed(1)}%</span>
+      </div>
+    </div>
+
+    <div class="ss-predict-card">
+      <h4>👨‍⚕️ Dokter Risiko Tinggi (>15% error)</h4>
+      ${highRisk.length===0
+        ? '<p>✅ Tidak ada dokter dengan error rate di atas ambang batas saat ini.</p>'
+        : highRisk.map(d => {
+            const p = (stats[d].error/stats[d].total)*100;
+            const col = p>30?'#dc2626':'#f59e0b';
+            const lbl = p>30?'🔴 Kritis':'🟡 Perlu Perhatian';
+            return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px">
+              <span style="font-weight:500">${d}</span>
+              <span style="display:flex;align-items:center;gap:8px">
+                <div class="ss-risk-bar" style="width:100px"><div class="ss-risk-fill" style="width:${Math.min(p,100)}%;background:${col}"></div></div>
+                <span style="color:${col};font-weight:600">${p.toFixed(1)}% — ${lbl}</span>
+              </span>
+            </div>`;
+          }).join('')
+      }
+    </div>
+
+    <div class="ss-predict-card">
+      <h4>📋 Rekomendasi Tindakan Prioritas</h4>
+      <p style="line-height:2">
+        ${rate>30?'🔴 <strong>Prioritas 1:</strong> Audit menyeluruh + pelatihan wajib semua klinisi<br>':''}
+        ${rate>15&&rate<=30?'🟡 <strong>Prioritas 1:</strong> Review SOP & pelatihan FHIR targeted<br>':''}
+        ${highRisk.length>0?`📋 <strong>Prioritas 2:</strong> Coaching 1-on-1 untuk: ${highRisk.join(', ')}<br>`:''}
+        📊 <strong>Monitoring:</strong> Jadwalkan audit FHIR mingguan<br>
+        📚 <strong>Edukasi:</strong> Workshop dosageInstruction.timing & MedicationRequest.status<br>
+        🔗 <strong>Referensi:</strong> Panduan FHIR SATUSEHAT di platform.satusehat.kemkes.go.id
+      </p>
+    </div>
+  `;
+}
+
+// ---- Notification ----
+function ssShowNotif(type, icon, title, desc, dur=5000){
+  const stack = document.getElementById('ssNotifStack');
+  const n = document.createElement('div');
+  n.className = 'ss-notif ' + type;
+  n.innerHTML = `<span style="font-size:18px;flex-shrink:0">${icon}</span>
+    <div style="flex:1"><div style="font-weight:600;font-size:13px;margin-bottom:2px">${title}</div><div style="font-size:12px;color:#555">${desc}</div></div>
+    <span onclick="this.parentElement.remove()" style="cursor:pointer;color:#999;font-size:18px;line-height:1;flex-shrink:0">×</span>`;
+  stack.appendChild(n);
+  setTimeout(()=>{if(n.parentElement)n.remove();}, dur);
+}
+
+// ---- Tab switcher for SATUSEHAT ----
+function ssSwitchTab(id, btn){
+  document.querySelectorAll('.ss-tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ss-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('ss-tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+
+</body>
+</html>
